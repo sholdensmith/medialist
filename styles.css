@@ -414,6 +414,15 @@ header .subtitle {
 .status-badge.reading { background: var(--warning); color: #000; }
 .status-badge.read { background: var(--success); color: #000; }
 .status-badge.in-library { background: var(--success); color: #000; }
+.status-badge.type-fiction { background: #8b5cf6; }
+.status-badge.type-nonfiction { background: #06b6d4; }
+
+.card-badges {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
 
 /* Streaming badges */
 .streaming-badges {

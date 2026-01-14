@@ -981,6 +981,7 @@ function renderBooks() {
 function renderBookCard(book) {
   const statusClass = book.status || 'want';
   const statusLabel = { want: 'Want to Read', reading: 'Reading', read: 'Read' }[statusClass] || '';
+  const typeLabel = book.is_fiction === true ? 'Fiction' : book.is_fiction === false ? 'Nonfiction' : '';
 
   return `
     <div class="media-card">
@@ -994,7 +995,10 @@ function renderBookCard(book) {
           <span>${book.creator}</span>
           ${book.year ? `<span>${book.year}</span>` : ''}
         </div>
-        <span class="status-badge ${statusClass}">${statusLabel}</span>
+        <div class="card-badges">
+          <span class="status-badge ${statusClass}">${statusLabel}</span>
+          ${typeLabel ? `<span class="status-badge type-${book.is_fiction ? 'fiction' : 'nonfiction'}">${typeLabel}</span>` : ''}
+        </div>
         <div class="card-actions">
           <button class="btn btn-small btn-secondary" onclick="openBookModal('${book.id}')">Edit</button>
           <button class="btn btn-small" style="background: var(--accent);" onclick="removeMedia('${book.id}', 'books')">Remove</button>

@@ -49,7 +49,6 @@ const elements = {
   filmsSearchResults: document.getElementById('films-search-results'),
   filmsList: document.getElementById('films-list'),
   filmsEmpty: document.getElementById('films-empty'),
-  filmsCountryFilter: document.getElementById('films-country-filter'),
   filmsServiceFilter: document.getElementById('films-service-filter'),
   filmsLibraryFilter: document.getElementById('films-library-filter'),
 
@@ -172,7 +171,6 @@ function setupEventListeners() {
   elements.filmsSearch.addEventListener('keypress', e => {
     if (e.key === 'Enter') searchFilms();
   });
-  elements.filmsCountryFilter.addEventListener('change', renderFilms);
   elements.filmsServiceFilter.addEventListener('change', renderFilms);
   elements.filmsLibraryFilter.addEventListener('change', renderFilms);
 
@@ -203,6 +201,19 @@ function setupEventListeners() {
   document.getElementById('settings-save-keys').addEventListener('click', saveSettings);
   document.getElementById('export-data-btn').addEventListener('click', exportData);
   document.getElementById('import-data-input').addEventListener('change', importData);
+
+  // Back to top button
+  const backToTopBtn = document.getElementById('back-to-top');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 300) {
+      backToTopBtn.classList.remove('hidden');
+    } else {
+      backToTopBtn.classList.add('hidden');
+    }
+  });
+  backToTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 }
 
 function switchTab(tabName) {
@@ -624,7 +635,7 @@ function displayFilmSearchResults(films) {
 
 async function addFilm(watchmodeId) {
   const watchmodeKey = localStorage.getItem('watchmode_key');
-  const country = elements.filmsCountryFilter.value;
+  const country = 'US'; // Default to US region
 
   try {
     // Fetch film details and streaming sources in parallel

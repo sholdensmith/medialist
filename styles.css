@@ -778,3 +778,31 @@ header .subtitle {
   font-weight: 600;
   font-size: 0.85rem;
 }
+
+/* Back to Top Button */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 100;
+}
+
+.back-to-top:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+}
+
+.back-to-top.hidden {
+  opacity: 0;
+  pointer-events: none;
+}

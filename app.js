@@ -491,7 +491,7 @@ function renderMusic() {
           </div>
           <div class="card-actions">
             <a href="${album.spotify_url || album.external_url}" target="_blank" class="btn btn-secondary">Spotify</a>
-            <button class="btn btn-small" style="background: var(--accent);" onclick="removeMedia('${album.id}', 'music')">Remove</button>
+            <button class="btn-remove" onclick="removeMedia('${album.id}', 'music')" title="Remove">&times;</button>
           </div>
         </div>
       </div>
@@ -739,7 +739,7 @@ function renderFilms() {
             ${streamingBadges ? `<div class="streaming-badges">${streamingBadges}</div>` : ''}
             <div class="card-actions">
               <button class="btn btn-small ${film.in_library ? 'btn-success' : 'btn-secondary'}" onclick="toggleFilmLibrary('${film.id}')">${film.in_library ? 'In Library' : 'Add to Library'}</button>
-              <button class="btn btn-small" style="background: var(--accent);" onclick="removeMedia('${film.id}', 'films')">Remove</button>
+              <button class="btn-remove" onclick="removeMedia('${film.id}', 'films')" title="Remove">&times;</button>
             </div>
           </div>
         </div>
@@ -942,6 +942,12 @@ function renderBooks() {
     books = books.filter(b => (b.tags || []).includes(tagFilter));
   }
 
+  // Hide read books if setting is enabled
+  const hideReadBooks = localStorage.getItem('hide_read_books') === 'true';
+  if (hideReadBooks && !statusFilter) {
+    books = books.filter(b => b.status !== 'read');
+  }
+
   // Currently reading section
   const currentlyReading = mediaList.filter(m => m.type === 'book' && m.status === 'reading');
   if (currentlyReading.length > 0 && !statusFilter) {
@@ -1000,8 +1006,8 @@ function renderBookCard(book) {
           ${typeLabel ? `<span class="status-badge type-${book.is_fiction ? 'fiction' : 'nonfiction'}">${typeLabel}</span>` : ''}
         </div>
         <div class="card-actions">
-          <button class="btn btn-small btn-secondary" onclick="openBookModal('${book.id}')">Edit</button>
-          <button class="btn btn-small" style="background: var(--accent);" onclick="removeMedia('${book.id}', 'books')">Remove</button>
+          <button class="btn btn-small btn-secondary" onclick="openBookModal('${book.id}')">Details</button>
+          <button class="btn-remove" onclick="removeMedia('${book.id}', 'books')" title="Remove">&times;</button>
         </div>
       </div>
     </div>
@@ -1204,6 +1210,14 @@ function openSettings() {
   tagsList.innerHTML = allTags.map(tag => `
     <span class="tag-item">${tag} <button onclick="deleteGlobalTag('${tag}')">&times;</button></span>
   `).join('') || '<p style="color: var(--text-secondary)">No tags yet</p>';
+
+  // Populate display options
+  const hideReadCheckbox = document.getElementById('settings-hide-read-books');
+  hideReadCheckbox.checked = localStorage.getItem('hide_read_books') === 'true';
+  hideReadCheckbox.onchange = () => {
+    localStorage.setItem('hide_read_books', hideReadCheckbox.checked);
+    renderBooks();
+  };
 
   // Populate streaming services
   populateServicesSettings();

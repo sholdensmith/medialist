@@ -224,7 +224,7 @@ async function loadAllData() {
     const { data, error } = await supabaseClient
       .from('medialist')
       .select('*')
-      .order('year', { ascending: true, nullsFirst: false });
+      .order('year', { ascending: false, nullsFirst: true });
 
     if (error) throw error;
 
@@ -260,12 +260,12 @@ async function saveItem(item) {
       mediaList[index] = item;
     } else {
       mediaList.push(item);
-      // Re-sort by year
+      // Re-sort by year (newest first)
       mediaList.sort((a, b) => {
         if (a.year === null && b.year === null) return 0;
         if (a.year === null) return 1;
         if (b.year === null) return -1;
-        return a.year - b.year;
+        return b.year - a.year;
       });
     }
 
@@ -1090,12 +1090,12 @@ function groupByYear(items) {
     groups.get(year).push(item);
   });
 
-  // Sort by year ascending
+  // Sort by year descending (newest first)
   return Array.from(groups.entries())
     .sort((a, b) => {
       if (a[0] === 'Unknown') return 1;
       if (b[0] === 'Unknown') return -1;
-      return a[0] - b[0];
+      return b[0] - a[0];
     })
     .map(([year, items]) => ({ year, items }));
 }

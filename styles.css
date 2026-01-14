@@ -227,9 +227,16 @@ header .subtitle {
   margin-right: auto;
 }
 
-.search-container input {
+.search-input-wrapper {
   flex: 1;
-  padding: 0.75rem 1rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-container input {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg-secondary);
@@ -240,6 +247,33 @@ header .subtitle {
 .search-container input:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.search-clear-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.search-clear-btn.hidden {
+  display: none;
 }
 
 /* Filter Row */

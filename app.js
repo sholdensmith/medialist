@@ -39,6 +39,7 @@ const elements = {
   // Music
   musicSearch: document.getElementById('music-search'),
   musicSearchBtn: document.getElementById('music-search-btn'),
+  musicSearchClear: document.getElementById('music-search-clear'),
   musicSearchResults: document.getElementById('music-search-results'),
   musicList: document.getElementById('music-list'),
   musicEmpty: document.getElementById('music-empty'),
@@ -46,6 +47,7 @@ const elements = {
   // Films
   filmsSearch: document.getElementById('films-search'),
   filmsSearchBtn: document.getElementById('films-search-btn'),
+  filmsSearchClear: document.getElementById('films-search-clear'),
   filmsSearchResults: document.getElementById('films-search-results'),
   filmsList: document.getElementById('films-list'),
   filmsEmpty: document.getElementById('films-empty'),
@@ -56,6 +58,7 @@ const elements = {
   // Books
   booksSearch: document.getElementById('books-search'),
   booksSearchBtn: document.getElementById('books-search-btn'),
+  booksSearchClear: document.getElementById('books-search-clear'),
   booksSearchResults: document.getElementById('books-search-results'),
   booksList: document.getElementById('books-list'),
   booksEmpty: document.getElementById('books-empty'),
@@ -166,11 +169,29 @@ function setupEventListeners() {
   elements.musicSearch.addEventListener('keypress', e => {
     if (e.key === 'Enter') searchMusic();
   });
+  elements.musicSearch.addEventListener('input', e => {
+    elements.musicSearchClear.classList.toggle('hidden', !e.target.value);
+  });
+  elements.musicSearchClear.addEventListener('click', () => {
+    elements.musicSearch.value = '';
+    elements.musicSearchClear.classList.add('hidden');
+    elements.musicSearchResults.classList.add('hidden');
+    elements.musicSearch.focus();
+  });
 
   // Films
   elements.filmsSearchBtn.addEventListener('click', searchFilms);
   elements.filmsSearch.addEventListener('keypress', e => {
     if (e.key === 'Enter') searchFilms();
+  });
+  elements.filmsSearch.addEventListener('input', e => {
+    elements.filmsSearchClear.classList.toggle('hidden', !e.target.value);
+  });
+  elements.filmsSearchClear.addEventListener('click', () => {
+    elements.filmsSearch.value = '';
+    elements.filmsSearchClear.classList.add('hidden');
+    elements.filmsSearchResults.classList.add('hidden');
+    elements.filmsSearch.focus();
   });
   elements.filmsServiceFilter.addEventListener('change', renderFilms);
   elements.filmsStreamableFilter.addEventListener('change', renderFilms);
@@ -180,6 +201,15 @@ function setupEventListeners() {
   elements.booksSearchBtn.addEventListener('click', searchBooks);
   elements.booksSearch.addEventListener('keypress', e => {
     if (e.key === 'Enter') searchBooks();
+  });
+  elements.booksSearch.addEventListener('input', e => {
+    elements.booksSearchClear.classList.toggle('hidden', !e.target.value);
+  });
+  elements.booksSearchClear.addEventListener('click', () => {
+    elements.booksSearch.value = '';
+    elements.booksSearchClear.classList.add('hidden');
+    elements.booksSearchResults.classList.add('hidden');
+    elements.booksSearch.focus();
   });
   elements.booksStatusFilter.addEventListener('change', renderBooks);
   elements.booksTypeFilter.addEventListener('change', renderBooks);

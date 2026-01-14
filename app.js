@@ -754,7 +754,11 @@ function renderFilms() {
   elements.filmsList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
     ${items.map(film => {
-      const sources = [...(film.streaming_sources || []), ...(film.manual_streaming_sources || [])];
+      const allSources = [...(film.streaming_sources || []), ...(film.manual_streaming_sources || [])];
+      // Only show services the user has selected
+      const sources = selectedServices.length > 0
+        ? allSources.filter(s => selectedServices.includes(s.source_id) || selectedServices.includes(s.sourceId))
+        : allSources;
       const streamingBadges = sources.slice(0, 3).map(s => {
         const url = s.web_url || s.link || '';
         if (url) {
@@ -1214,7 +1218,9 @@ function escapeHtml(str) {
 function formatServiceName(name) {
   const renames = {
     'Max': 'HBO Max',
+    'MAX': 'HBO Max',
     'Max Amazon Channel': 'HBO Max',
+    'HBO': 'HBO Max',
   };
   return renames[name] || name;
 }

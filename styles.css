@@ -298,6 +298,12 @@ header .subtitle {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  padding: 0.5rem 0;
+  margin: -0.5rem 0 1rem 0;
+  z-index: 10;
 }
 
 .search-results h3 .close-btn {

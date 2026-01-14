@@ -858,21 +858,6 @@ a.streaming-badge:hover {
   color: var(--success);
   font-weight: 600;
   font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.added-indicator:hover {
-  text-decoration: underline;
-}
-
-/* Highlight animation for scrolled-to items */
-.media-card.highlight {
-  animation: highlightPulse 2s ease-out;
-}
-
-@keyframes highlightPulse {
-  0%, 100% { box-shadow: 0 4px 12px var(--shadow); }
-  25%, 75% { box-shadow: 0 0 20px var(--accent); }
 }
 
 /* Back to Top Button */

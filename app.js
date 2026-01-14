@@ -457,7 +457,7 @@ function displayMusicSearchResults(albums) {
           </div>
           <div class="actions">
             ${isAdded
-              ? `<span class="added-indicator" onclick="scrollToItem('${album.id}')" title="Click to scroll to item">Added</span>`
+              ? '<span class="added-indicator">Added</span>'
               : `<button class="btn btn-small btn-success" onclick="addAlbum('${album.id}', '${escapeHtml(album.name)}', '${escapeHtml(album.artists[0]?.name || 'Unknown')}', ${year}, '${coverUrl}', '${album.external_urls.spotify}')">Add</button>`
             }
             <a href="${album.external_urls.spotify}" target="_blank" class="btn btn-small btn-secondary">Spotify</a>
@@ -510,7 +510,7 @@ function renderMusic() {
   elements.musicList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
     ${items.map(album => `
-      <div class="media-card" data-id="${album.spotify_id}">
+      <div class="media-card">
         ${album.image_url
           ? `<img class="poster" src="${album.image_url}" alt="${album.title}">`
           : '<div class="poster-placeholder">🎵</div>'
@@ -677,7 +677,7 @@ function displayFilmSearchResults(films) {
           </div>
           <div class="actions">
             ${isAdded
-              ? `<span class="added-indicator" onclick="scrollToItem('${film.id}')" title="Click to scroll to item">Added</span>`
+              ? '<span class="added-indicator">Added</span>'
               : `<button class="btn btn-small btn-success" onclick="addFilm(${film.id})">Add</button>`
             }
           </div>
@@ -798,7 +798,7 @@ function renderFilms() {
       }).join('');
 
       return `
-        <div class="media-card" data-id="${film.external_id}">
+        <div class="media-card">
           ${film.image_url
             ? `<img class="poster" src="${film.image_url}" alt="${film.title}">`
             : '<div class="poster-placeholder">🎬</div>'
@@ -956,7 +956,7 @@ function displayBookSearchResults(books) {
           </div>
           <div class="actions">
             ${isAdded
-              ? `<span class="added-indicator" onclick="scrollToItem('${escapeHtml(book.id)}')" title="Click to scroll to item">Added</span>`
+              ? '<span class="added-indicator">Added</span>'
               : `<button class="btn btn-small btn-success" onclick="addBook('${escapeHtml(book.id)}', '${escapeHtml(book.title)}', '${escapeHtml(book.author)}', ${book.year || 'null'}, '${book.cover || ''}', ${book.pages || 'null'}, '${book.source}')">Add</button>`
             }
           </div>
@@ -1064,7 +1064,7 @@ function renderBookCard(book) {
   const typeLabel = book.is_fiction === true ? 'Fiction' : book.is_fiction === false ? 'Nonfiction' : '';
 
   return `
-    <div class="media-card" data-id="${book.external_id}">
+    <div class="media-card">
       ${book.image_url
         ? `<img class="poster" src="${book.image_url}" alt="${book.title}">`
         : '<div class="poster-placeholder">📚</div>'
@@ -1243,15 +1243,6 @@ function escapeHtml(str) {
     '"': '&quot;',
     "'": '&#39;'
   }[char]));
-}
-
-function scrollToItem(itemId) {
-  const card = document.querySelector(`.media-card[data-id="${itemId}"]`);
-  if (card) {
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    card.classList.add('highlight');
-    setTimeout(() => card.classList.remove('highlight'), 2000);
-  }
 }
 
 function formatServiceName(name) {
@@ -1480,7 +1471,6 @@ window.addAlbum = addAlbum;
 window.addFilm = addFilm;
 window.addBook = addBook;
 window.removeMedia = removeMedia;
-window.scrollToItem = scrollToItem;
 window.toggleFilmLibrary = toggleFilmLibrary;
 window.openBookModal = openBookModal;
 window.updateBookField = updateBookField;

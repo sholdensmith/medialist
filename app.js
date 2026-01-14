@@ -50,6 +50,7 @@ const elements = {
   filmsList: document.getElementById('films-list'),
   filmsEmpty: document.getElementById('films-empty'),
   filmsServiceFilter: document.getElementById('films-service-filter'),
+  filmsStreamableFilter: document.getElementById('films-streamable-filter'),
   filmsLibraryFilter: document.getElementById('films-library-filter'),
 
   // Books
@@ -172,6 +173,7 @@ function setupEventListeners() {
     if (e.key === 'Enter') searchFilms();
   });
   elements.filmsServiceFilter.addEventListener('change', renderFilms);
+  elements.filmsStreamableFilter.addEventListener('change', renderFilms);
   elements.filmsLibraryFilter.addEventListener('change', renderFilms);
 
   // Books
@@ -691,7 +693,15 @@ function renderFilms() {
 
   // Apply filters
   const serviceFilter = elements.filmsServiceFilter.value;
+  const streamableFilter = elements.filmsStreamableFilter.checked;
   const libraryFilter = elements.filmsLibraryFilter.checked;
+
+  if (streamableFilter) {
+    films = films.filter(f => {
+      const sources = [...(f.streaming_sources || []), ...(f.manual_streaming_sources || [])];
+      return sources.length > 0;
+    });
+  }
 
   if (libraryFilter) {
     films = films.filter(f => f.in_library);

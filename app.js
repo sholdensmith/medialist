@@ -81,6 +81,17 @@ async function init() {
     return;
   }
 
+  // Validate URL format before trying to connect
+  try {
+    new URL(supabaseUrl);
+  } catch {
+    console.error('Invalid Supabase URL, clearing and showing setup');
+    localStorage.removeItem('supabase_url');
+    localStorage.removeItem('supabase_key');
+    showSetupScreen();
+    return;
+  }
+
   // Initialize Supabase
   try {
     supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -88,6 +99,8 @@ async function init() {
     showMainApp();
   } catch (error) {
     console.error('Failed to initialize:', error);
+    localStorage.removeItem('supabase_url');
+    localStorage.removeItem('supabase_key');
     showSetupScreen();
   }
 }

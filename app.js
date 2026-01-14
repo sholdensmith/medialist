@@ -509,17 +509,56 @@ async function loadStreamingServices() {
 
 function populateServiceFilter() {
   const filter = elements.filmsServiceFilter;
-  const popular = ['Netflix', 'Amazon Prime Video', 'Hulu', 'Disney+', 'Max', 'Apple TV+', 'Peacock', 'Paramount+', 'Criterion Channel', 'Kanopy'];
 
   filter.innerHTML = '<option value="">All Services</option>';
 
-  // Add popular services first
-  popular.forEach(name => {
+  // Only show user's selected services in filter
+  if (selectedServices.length > 0) {
+    selectedServices.forEach(serviceId => {
+      const service = availableServices.find(s => s.id === serviceId);
+      if (service) {
+        filter.innerHTML += `<option value="${service.id}">${formatServiceName(service.name)}</option>`;
+      }
+    });
+  } else {
+    // Fallback to popular services if none selected
+    const popular = ['Netflix', 'Amazon Prime Video', 'Hulu', 'Disney+', 'Max', 'Apple TV+', 'Peacock', 'Paramount+', 'Criterion Channel', 'Kanopy'];
+    popular.forEach(name => {
+      const service = availableServices.find(s => s.name === name);
+      if (service) {
+        filter.innerHTML += `<option value="${service.id}">${formatServiceName(service.name)}</option>`;
+      }
+    });
+  }
+}
+
+function populateServicesSettings() {
+  const container = document.getElementById('streaming-services-list');
+  if (!container || availableServices.length === 0) return;
+
+  const popular = ['Netflix', 'Amazon Prime Video', 'Hulu', 'Disney+', 'Max', 'Apple TV+', 'Peacock', 'Paramount+', 'Criterion Channel', 'Kanopy', 'Hoopla', 'Tubi', 'Pluto TV', 'Mubi', 'Shudder'];
+
+  container.innerHTML = popular.map(name => {
     const service = availableServices.find(s => s.name === name);
-    if (service) {
-      filter.innerHTML += `<option value="${service.id}">${service.name}</option>`;
-    }
-  });
+    if (!service) return '';
+    const checked = selectedServices.includes(service.id) ? 'checked' : '';
+    return `
+      <label class="service-checkbox">
+        <input type="checkbox" value="${service.id}" ${checked} onchange="toggleService(${service.id})">
+        ${formatServiceName(service.name)}
+      </label>
+    `;
+  }).join('');
+}
+
+function toggleService(serviceId) {
+  if (selectedServices.includes(serviceId)) {
+    selectedServices = selectedServices.filter(id => id !== serviceId);
+  } else {
+    selectedServices.push(serviceId);
+  }
+  localStorage.setItem('selected_services', JSON.stringify(selectedServices));
+  populateServiceFilter();
 }
 
 async function searchFilms() {
@@ -670,7 +709,7 @@ function renderFilms() {
     ${items.map(film => {
       const sources = [...(film.streaming_sources || []), ...(film.manual_streaming_sources || [])];
       const streamingBadges = sources.slice(0, 3).map(s =>
-        `<span class="streaming-badge">${s.name}</span>`
+        `<span class="streaming-badge">${formatServiceName(s.name)}</span>`
       ).join('');
 
       return `
@@ -1111,6 +1150,14 @@ function escapeHtml(str) {
   }[char]));
 }
 
+function formatServiceName(name) {
+  const renames = {
+    'Max': 'HBO Max',
+    'Max Amazon Channel': 'HBO Max',
+  };
+  return renames[name] || name;
+}
+
 async function removeMedia(id, tab) {
   if (!confirm('Remove this item from your list?')) return;
 
@@ -1142,6 +1189,9 @@ function openSettings() {
   tagsList.innerHTML = allTags.map(tag => `
     <span class="tag-item">${tag} <button onclick="deleteGlobalTag('${tag}')">&times;</button></span>
   `).join('') || '<p style="color: var(--text-secondary)">No tags yet</p>';
+
+  // Populate streaming services
+  populateServicesSettings();
 
   elements.settingsModal.classList.remove('hidden');
 }
@@ -1322,3 +1372,4 @@ window.updateBookField = updateBookField;
 window.addBookTag = addBookTag;
 window.removeBookTag = removeBookTag;
 window.deleteGlobalTag = deleteGlobalTag;
+window.toggleService = toggleService;

@@ -1480,6 +1480,7 @@ window.addAlbum = addAlbum;
 window.addFilm = addFilm;
 window.addBook = addBook;
 window.removeMedia = removeMedia;
+window.scrollToItem = scrollToItem;
 window.toggleFilmLibrary = toggleFilmLibrary;
 window.openBookModal = openBookModal;
 window.updateBookField = updateBookField;

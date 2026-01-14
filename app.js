@@ -547,13 +547,35 @@ function populateServiceFilter() {
 
 function populateServicesSettings() {
   const container = document.getElementById('streaming-services-list');
-  if (!container || availableServices.length === 0) return;
+  if (!container) return;
 
-  const popular = ['Netflix', 'Amazon Prime Video', 'Hulu', 'Disney+', 'Max', 'Apple TV+', 'Peacock', 'Paramount+', 'Criterion Channel', 'Kanopy', 'Hoopla', 'Tubi', 'Pluto TV', 'Mubi', 'Shudder'];
+  if (availableServices.length === 0) {
+    container.innerHTML = '<p style="color: var(--text-secondary)">Loading services... (requires Watchmode API key)</p>';
+    return;
+  }
 
-  container.innerHTML = popular.map(name => {
-    const service = availableServices.find(s => s.name === name);
-    if (!service) return '';
+  // Prioritize common subscription services, then show all others
+  const priorityNames = [
+    'Netflix', 'Amazon Prime Video', 'Hulu', 'Disney+', 'Max', 'Apple TV+',
+    'Peacock', 'Paramount+', 'Criterion Channel', 'Kanopy', 'Hoopla',
+    'Tubi', 'Pluto TV', 'Mubi', 'Shudder', 'AMC+', 'Starz', 'Showtime',
+    'BritBox', 'Acorn TV', 'MGM+', 'Cinemax', 'Fandor', 'Cohen Media',
+    'Kino Now', 'OVID', 'Flix Premiere', 'Dekkoo', 'Arrow', 'Sundance Now'
+  ];
+
+  // Get priority services first
+  const priorityServices = priorityNames
+    .map(name => availableServices.find(s => s.name === name))
+    .filter(Boolean);
+
+  // Get remaining subscription/free services not in priority list
+  const otherServices = availableServices
+    .filter(s => !priorityNames.includes(s.name) && (s.type === 'sub' || s.type === 'free'))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const allServices = [...priorityServices, ...otherServices];
+
+  container.innerHTML = allServices.map(service => {
     const checked = selectedServices.includes(service.id) ? 'checked' : '';
     return `
       <label class="service-checkbox">
@@ -699,6 +721,10 @@ function renderFilms() {
   if (streamableFilter) {
     films = films.filter(f => {
       const sources = [...(f.streaming_sources || []), ...(f.manual_streaming_sources || [])];
+      // Only consider sources from user's selected services
+      if (selectedServices.length > 0) {
+        return sources.some(s => selectedServices.includes(s.source_id) || selectedServices.includes(s.sourceId));
+      }
       return sources.length > 0;
     });
   }
@@ -729,9 +755,13 @@ function renderFilms() {
     <div class="year-header">${year || 'Unknown Year'}</div>
     ${items.map(film => {
       const sources = [...(film.streaming_sources || []), ...(film.manual_streaming_sources || [])];
-      const streamingBadges = sources.slice(0, 3).map(s =>
-        `<span class="streaming-badge">${formatServiceName(s.name)}</span>`
-      ).join('');
+      const streamingBadges = sources.slice(0, 3).map(s => {
+        const url = s.web_url || s.link || '';
+        if (url) {
+          return `<a href="${url}" target="_blank" class="streaming-badge streaming-link">${formatServiceName(s.name)}</a>`;
+        }
+        return `<span class="streaming-badge">${formatServiceName(s.name)}</span>`;
+      }).join('');
 
       return `
         <div class="media-card">

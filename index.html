@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediaList</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+</head>
+<body>
+  <!-- Setup Screen -->
+  <div id="setup-screen" class="setup-screen hidden">
+    <div class="setup-container">
+      <h1>MediaList Setup</h1>
+      <p>Configure your API keys and Supabase connection</p>
+
+      <div class="setup-section">
+        <h3>Supabase (Required)</h3>
+        <input type="text" id="setup-supabase-url" placeholder="Supabase URL">
+        <input type="text" id="setup-supabase-key" placeholder="Supabase Anon Key">
+      </div>
+
+      <div class="setup-section">
+        <h3>Spotify (for Music)</h3>
+        <input type="text" id="setup-spotify-client-id" placeholder="Spotify Client ID">
+        <input type="text" id="setup-spotify-client-secret" placeholder="Spotify Client Secret">
+      </div>
+
+      <div class="setup-section">
+        <h3>Watchmode (for Films)</h3>
+        <input type="text" id="setup-watchmode-key" placeholder="Watchmode API Key">
+      </div>
+
+      <div class="setup-section">
+        <h3>OMDb (Optional, for Films)</h3>
+        <input type="text" id="setup-omdb-key" placeholder="OMDb API Key">
+      </div>
+
+      <button id="setup-save-btn" class="btn btn-primary">Save & Continue</button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="main-app" class="hidden">
+    <header>
+      <h1>MediaList</h1>
+      <p class="subtitle">Track albums, films, and books you want to experience</p>
+      <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="music">🎵 Music</button>
+      <button class="tab" data-tab="films">🎬 Films</button>
+      <button class="tab" data-tab="books">📚 Books</button>
+    </nav>
+
+    <!-- Music Tab -->
+    <section id="music-tab" class="tab-content active">
+      <div class="search-container">
+        <input type="text" id="music-search" placeholder="Search for albums...">
+        <button id="music-search-btn" class="btn">Search</button>
+      </div>
+      <div id="music-search-results" class="search-results hidden"></div>
+      <div id="music-list" class="media-grid"></div>
+      <div id="music-empty" class="empty-state hidden">
+        <p>Your music list is empty</p>
+        <p class="hint">Search for albums above to add them</p>
+      </div>
+    </section>
+
+    <!-- Films Tab -->
+    <section id="films-tab" class="tab-content hidden">
+      <div class="search-container">
+        <input type="text" id="films-search" placeholder="Search for films...">
+        <button id="films-search-btn" class="btn">Search</button>
+      </div>
+      <div class="filter-row">
+        <select id="films-country-filter">
+          <option value="US">🇺🇸 United States</option>
+          <option value="GB">🇬🇧 United Kingdom</option>
+          <option value="CA">🇨🇦 Canada</option>
+          <option value="AU">🇦🇺 Australia</option>
+        </select>
+        <select id="films-service-filter">
+          <option value="">All Services</option>
+        </select>
+        <label class="checkbox-label">
+          <input type="checkbox" id="films-library-filter"> In Library Only
+        </label>
+      </div>
+      <div id="films-search-results" class="search-results hidden"></div>
+      <div id="films-list" class="media-grid"></div>
+      <div id="films-empty" class="empty-state hidden">
+        <p>Your film list is empty</p>
+        <p class="hint">Search for films above to add them</p>
+      </div>
+    </section>
+
+    <!-- Books Tab -->
+    <section id="books-tab" class="tab-content hidden">
+      <div class="search-container">
+        <input type="text" id="books-search" placeholder="Search for books...">
+        <button id="books-search-btn" class="btn">Search</button>
+      </div>
+      <div class="filter-row">
+        <select id="books-status-filter">
+          <option value="">All Status</option>
+          <option value="want">Want to Read</option>
+          <option value="reading">Currently Reading</option>
+          <option value="read">Read</option>
+        </select>
+        <select id="books-type-filter">
+          <option value="">All Types</option>
+          <option value="fiction">Fiction</option>
+          <option value="nonfiction">Nonfiction</option>
+        </select>
+        <select id="books-tag-filter">
+          <option value="">All Tags</option>
+        </select>
+      </div>
+      <div id="books-currently-reading" class="currently-reading hidden"></div>
+      <div id="books-search-results" class="search-results hidden"></div>
+      <div id="books-list" class="media-grid"></div>
+      <div id="books-empty" class="empty-state hidden">
+        <p>Your book list is empty</p>
+        <p class="hint">Search for books above to add them</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="close-btn" data-close="settings-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>API Keys</h3>
+          <label>
+            Supabase URL
+            <input type="text" id="settings-supabase-url">
+          </label>
+          <label>
+            Supabase Anon Key
+            <input type="text" id="settings-supabase-key">
+          </label>
+          <label>
+            Spotify Client ID
+            <input type="text" id="settings-spotify-client-id">
+          </label>
+          <label>
+            Spotify Client Secret
+            <input type="password" id="settings-spotify-client-secret">
+          </label>
+          <label>
+            Watchmode API Key
+            <input type="text" id="settings-watchmode-key">
+          </label>
+          <label>
+            OMDb API Key (Optional)
+            <input type="text" id="settings-omdb-key">
+          </label>
+          <button id="settings-save-keys" class="btn">Save Keys</button>
+        </div>
+
+        <div class="settings-section">
+          <h3>Film Streaming Services</h3>
+          <div id="streaming-services-list" class="services-grid"></div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Book Tags</h3>
+          <div id="book-tags-list" class="tags-list"></div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Data</h3>
+          <button id="export-data-btn" class="btn">Export All Data</button>
+          <label class="file-input-label">
+            Import Data
+            <input type="file" id="import-data-input" accept=".json">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Book Details Modal -->
+  <div id="book-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="book-modal-title">Book Details</h2>
+        <button class="close-btn" data-close="book-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="book-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Film Details Modal -->
+  <div id="film-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="film-modal-title">Film Details</h2>
+        <button class="close-btn" data-close="film-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="film-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- App Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

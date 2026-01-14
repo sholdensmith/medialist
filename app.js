@@ -5,7 +5,7 @@
 // State & Configuration
 // ============================================================================
 
-let supabase = null;
+let supabaseClient = null;
 let mediaList = [];
 let allTags = [];
 let availableServices = [];
@@ -83,7 +83,7 @@ async function init() {
 
   // Initialize Supabase
   try {
-    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
     await loadAllData();
     showMainApp();
   } catch (error) {
@@ -208,7 +208,7 @@ function switchTab(tabName) {
 
 async function loadAllData() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('medialist')
       .select('*')
       .order('year', { ascending: true, nullsFirst: false });
@@ -235,7 +235,7 @@ async function loadAllData() {
 
 async function saveItem(item) {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('medialist')
       .upsert(item);
 
@@ -264,7 +264,7 @@ async function saveItem(item) {
 
 async function deleteItem(id) {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('medialist')
       .delete()
       .eq('id', id);

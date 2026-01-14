@@ -399,7 +399,7 @@ function displayMusicSearchResults(albums) {
   const existingIds = new Set(mediaList.filter(m => m.type === 'album').map(m => m.spotify_id));
 
   elements.musicSearchResults.innerHTML = `
-    <h3>Search Results</h3>
+    <h3>Search Results <button class="close-btn" onclick="this.closest('.search-results').classList.add('hidden')">&times;</button></h3>
     ${albums.map(album => {
       const year = album.release_date ? parseInt(album.release_date.substring(0, 4)) : null;
       const isAdded = existingIds.has(album.id);
@@ -560,7 +560,7 @@ function displayFilmSearchResults(films) {
   const existingIds = new Set(mediaList.filter(m => m.type === 'film').map(m => m.external_id?.toString()));
 
   elements.filmsSearchResults.innerHTML = `
-    <h3>Search Results</h3>
+    <h3>Search Results <button class="close-btn" onclick="this.closest('.search-results').classList.add('hidden')">&times;</button></h3>
     ${films.slice(0, 12).map(film => {
       const isAdded = existingIds.has(film.id?.toString());
 
@@ -819,7 +819,7 @@ function displayBookSearchResults(books) {
   const existingIds = new Set(mediaList.filter(m => m.type === 'book').map(m => m.external_id));
 
   elements.booksSearchResults.innerHTML = `
-    <h3>Search Results</h3>
+    <h3>Search Results <button class="close-btn" onclick="this.closest('.search-results').classList.add('hidden')">&times;</button></h3>
     ${books.map(book => {
       const isAdded = existingIds.has(book.id);
 

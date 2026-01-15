@@ -808,8 +808,8 @@ function renderFilms() {
             <div class="card-meta">
               <span>${film.creator || film.director || ''}</span>
               ${film.year ? `<span>${film.year}</span>` : ''}
+              ${film.runtime ? `<span>${formatRuntime(film.runtime)}</span>` : ''}
             </div>
-            ${film.in_library ? '<span class="status-badge in-library">In Library</span>' : ''}
             ${streamingBadges ? `<div class="streaming-badges">${streamingBadges}</div>` : ''}
             <div class="card-actions">
               <button class="btn btn-small ${film.in_library ? 'btn-success' : 'btn-secondary'}" onclick="toggleFilmLibrary('${film.id}')">${film.in_library ? 'In Library' : 'Add to Library'}</button>
@@ -1235,6 +1235,12 @@ function compareByCreator(a, b) {
   const primary = creatorA.localeCompare(creatorB, undefined, { sensitivity: 'base' });
   if (primary !== 0) return primary;
   return compareByTitle(a, b);
+}
+
+function formatRuntime(minutes) {
+  const total = parseInt(minutes, 10);
+  if (!Number.isFinite(total) || total <= 0) return '';
+  return `${total} min`;
 }
 
 function groupByYear(items, compareFn = compareByTitle) {

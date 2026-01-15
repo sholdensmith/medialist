@@ -1213,6 +1213,22 @@ async function removeBookTag(id, tag) {
 // Shared Utilities
 // ============================================================================
 
+function stripLeadingArticle(title) {
+  return (title || '').replace(/^(the|an|a)\s+/i, '').trim();
+}
+
+function compareByTitle(a, b) {
+  const titleA = stripLeadingArticle(a.title || a.name || '');
+  const titleB = stripLeadingArticle(b.title || b.name || '');
+  const primary = titleA.localeCompare(titleB, undefined, { sensitivity: 'base' });
+  if (primary !== 0) return primary;
+  const fullA = (a.title || a.name || '');
+  const fullB = (b.title || b.name || '');
+  const secondary = fullA.localeCompare(fullB, undefined, { sensitivity: 'base' });
+  if (secondary !== 0) return secondary;
+  return (a.id || '').toString().localeCompare((b.id || '').toString());
+}
+
 function groupByYear(items) {
   const groups = new Map();
 
@@ -1231,7 +1247,10 @@ function groupByYear(items) {
       if (b[0] === 'Unknown') return -1;
       return b[0] - a[0];
     })
-    .map(([year, items]) => ({ year, items }));
+    .map(([year, items]) => {
+      items.sort(compareByTitle);
+      return { year, items };
+    });
 }
 
 function escapeHtml(str) {

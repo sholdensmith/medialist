@@ -398,6 +398,9 @@ header .subtitle {
   border-radius: 8px;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .media-card:hover {
@@ -410,6 +413,7 @@ header .subtitle {
   width: 100%;
   object-fit: cover;
   background: var(--bg-secondary);
+  flex-shrink: 0;
 }
 
 .media-card .poster-placeholder {
@@ -420,10 +424,14 @@ header .subtitle {
   justify-content: center;
   background: var(--bg-secondary);
   font-size: 3rem;
+  flex-shrink: 0;
 }
 
 .media-card .card-body {
   padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .media-card .card-title {
@@ -451,7 +459,9 @@ header .subtitle {
 .media-card .card-actions {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-top: auto;
 }
 
 .media-card .card-actions .btn {

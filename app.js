@@ -505,7 +505,7 @@ function renderMusic() {
   elements.musicEmpty.classList.add('hidden');
 
   // Group by year
-  const grouped = groupByYear(albums);
+  const grouped = groupByYear(albums, compareByCreator);
 
   elements.musicList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
@@ -1229,7 +1229,15 @@ function compareByTitle(a, b) {
   return (a.id || '').toString().localeCompare((b.id || '').toString());
 }
 
-function groupByYear(items) {
+function compareByCreator(a, b) {
+  const creatorA = stripLeadingArticle(a.creator || a.artist || '');
+  const creatorB = stripLeadingArticle(b.creator || b.artist || '');
+  const primary = creatorA.localeCompare(creatorB, undefined, { sensitivity: 'base' });
+  if (primary !== 0) return primary;
+  return compareByTitle(a, b);
+}
+
+function groupByYear(items, compareFn = compareByTitle) {
   const groups = new Map();
 
   items.forEach(item => {
@@ -1248,7 +1256,7 @@ function groupByYear(items) {
       return b[0] - a[0];
     })
     .map(([year, items]) => {
-      items.sort(compareByTitle);
+      items.sort(compareFn);
       return { year, items };
     });
 }

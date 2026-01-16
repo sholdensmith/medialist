@@ -1067,7 +1067,7 @@ function renderBookCard(book) {
   const amazonUrl = escapeHtml(buildAmazonBookUrl(book.title, book.creator));
 
   return `
-    <div class="media-card" data-item-id="${book.id}">
+    <div class="media-card book-card" data-item-id="${book.id}">
       <button class="poster-button" onclick="openBookModal('${book.id}')" title="View details">
         ${book.image_url
           ? `<img class="poster" src="${book.image_url}" alt="${book.title}">`

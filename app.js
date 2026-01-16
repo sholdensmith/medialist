@@ -447,6 +447,8 @@ function displayMusicSearchResults(albums) {
       const year = album.release_date ? parseInt(album.release_date.substring(0, 4)) : null;
       const isAdded = existingIds.has(album.id);
       const coverUrl = album.images[0]?.url || '';
+      const spotifyAppUrl = buildSpotifyAppUrl(album.id, album.external_urls.spotify);
+      const spotifyWebUrl = buildSpotifyWebUrl(album.id, album.external_urls.spotify);
 
       return `
         <div class="search-result-item">
@@ -460,7 +462,7 @@ function displayMusicSearchResults(albums) {
               ? `<span class="added-indicator" onclick="scrollToItem('spotify:album:${album.id}')" title="Jump to item">Added</span>`
               : `<button class="btn btn-small btn-success" onclick="addAlbum('${album.id}', '${escapeHtml(album.name)}', '${escapeHtml(album.artists[0]?.name || 'Unknown')}', ${year}, '${coverUrl}', '${album.external_urls.spotify}')">Add</button>`
             }
-            <a href="${album.external_urls.spotify}" target="_blank" class="btn btn-small btn-secondary">Spotify</a>
+            <a href="${escapeHtml(spotifyAppUrl)}" target="_blank" class="btn btn-small btn-secondary" onclick="return openSpotifyLink('${album.id}', '${escapeHtml(spotifyWebUrl)}')">Spotify</a>
           </div>
         </div>
       `;
@@ -509,7 +511,10 @@ function renderMusic() {
 
   elements.musicList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
-    ${items.map(album => `
+    ${items.map(album => {
+      const spotifyWebUrl = buildSpotifyWebUrl(album.spotify_id, album.spotify_url || album.external_url);
+      const spotifyAppUrl = buildSpotifyAppUrl(album.spotify_id, spotifyWebUrl);
+      return `
       <div class="media-card" data-item-id="${album.id}">
         ${album.image_url
           ? `<img class="poster" src="${album.image_url}" alt="${album.title}">`
@@ -522,12 +527,13 @@ function renderMusic() {
             ${album.year ? `<span>${album.year}</span>` : ''}
           </div>
           <div class="card-actions">
-            <a href="${album.spotify_url || album.external_url}" target="_blank" class="btn btn-secondary">Spotify</a>
+            <a href="${escapeHtml(spotifyAppUrl)}" target="_blank" class="btn btn-secondary" onclick="return openSpotifyLink('${escapeHtml(album.spotify_id || '')}', '${escapeHtml(spotifyWebUrl)}')">Spotify</a>
             <button class="btn-remove" onclick="removeMedia('${album.id}', 'music')" title="Remove">&times;</button>
           </div>
         </div>
       </div>
-    `).join('')}
+    `;
+    }).join('')}
   `).join('');
 }
 
@@ -1287,6 +1293,40 @@ function escapeHtml(str) {
 function buildAmazonBookUrl(title, author) {
   const query = [title, author].filter(Boolean).join(' ').trim();
   return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&i=stripbooks`;
+}
+
+function getSpotifyAlbumId(spotifyId, spotifyUrl) {
+  if (spotifyId) return spotifyId;
+  if (!spotifyUrl) return '';
+  const match = spotifyUrl.match(/spotify\.com\/album\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : '';
+}
+
+function buildSpotifyAppUrl(spotifyId, spotifyUrl) {
+  const id = getSpotifyAlbumId(spotifyId, spotifyUrl);
+  return id ? `spotify:album:${id}` : 'spotify:';
+}
+
+function buildSpotifyWebUrl(spotifyId, spotifyUrl) {
+  const id = getSpotifyAlbumId(spotifyId, spotifyUrl);
+  if (spotifyUrl) return spotifyUrl;
+  return id ? `https://open.spotify.com/album/${id}` : 'https://open.spotify.com/';
+}
+
+function openSpotifyLink(spotifyId, spotifyUrl) {
+  const appUrl = buildSpotifyAppUrl(spotifyId, spotifyUrl);
+  const webUrl = buildSpotifyWebUrl(spotifyId, spotifyUrl);
+  const start = Date.now();
+
+  window.location = appUrl;
+
+  setTimeout(() => {
+    if (document.visibilityState === 'visible' && Date.now() - start < 1500) {
+      window.open(webUrl, '_blank');
+    }
+  }, 900);
+
+  return false;
 }
 
 function scrollToItem(itemId) {

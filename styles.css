@@ -403,6 +403,14 @@ header .subtitle {
   height: 100%;
 }
 
+.poster-button {
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: inherit;
+}
+
 .media-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px var(--shadow);

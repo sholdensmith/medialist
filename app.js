@@ -1068,10 +1068,12 @@ function renderBookCard(book) {
 
   return `
     <div class="media-card" data-item-id="${book.id}">
-      ${book.image_url
-        ? `<img class="poster" src="${book.image_url}" alt="${book.title}">`
-        : '<div class="poster-placeholder">📚</div>'
-      }
+      <button class="poster-button" onclick="openBookModal('${book.id}')" title="View details">
+        ${book.image_url
+          ? `<img class="poster" src="${book.image_url}" alt="${book.title}">`
+          : '<div class="poster-placeholder">📚</div>'
+        }
+      </button>
       <div class="card-body">
         <div class="card-title">
           <a class="book-title-link" href="${amazonUrl}" target="_blank" rel="noopener noreferrer" title="${titleText}">${titleText}</a>

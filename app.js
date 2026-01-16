@@ -1311,6 +1311,24 @@ function formatServiceName(name) {
 function buildStreamingUrl(film, source) {
   const serviceName = (source?.name || source?.source_name || '').toLowerCase();
   if (serviceName.includes('kanopy')) {
+    const baseUrl = 'https://www.kanopy.com/en/multcolib/video/';
+    const candidates = [source?.web_url, source?.link, source?.url].filter(Boolean);
+    let videoId = source?.video_id || source?.videoId || '';
+
+    if (!videoId) {
+      for (const candidate of candidates) {
+        const match = candidate.match(/\/video\/(\d+)/);
+        if (match) {
+          videoId = match[1];
+          break;
+        }
+      }
+    }
+
+    if (videoId) {
+      return `${baseUrl}${videoId}`;
+    }
+
     const title = (film && film.title) ? film.title : '';
     if (title) {
       return `https://www.kanopy.com/en/search?query=${encodeURIComponent(title)}`;

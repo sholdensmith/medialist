@@ -1317,7 +1317,7 @@ function buildStreamingUrl(film, source) {
 
     if (!videoId) {
       for (const candidate of candidates) {
-        const match = candidate.match(/\/video\/(\d+)/);
+        const match = candidate.match(/\/video\/(\d+)/) || candidate.match(/movie-(\d+)/);
         if (match) {
           videoId = match[1];
           break;

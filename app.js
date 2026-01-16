@@ -790,9 +790,9 @@ function renderFilms() {
         ? allSources.filter(s => selectedServices.includes(s.source_id) || selectedServices.includes(s.sourceId))
         : allSources;
       const streamingBadges = sources.slice(0, 3).map(s => {
-        const url = s.web_url || s.link || '';
+        const url = buildStreamingUrl(film, s);
         if (url) {
-          return `<a href="${url}" target="_blank" class="streaming-badge streaming-link">${formatServiceName(s.name)}</a>`;
+          return `<a href="${escapeHtml(url)}" target="_blank" class="streaming-badge streaming-link">${formatServiceName(s.name)}</a>`;
         }
         return `<span class="streaming-badge">${formatServiceName(s.name)}</span>`;
       }).join('');
@@ -1306,6 +1306,18 @@ function formatServiceName(name) {
     'HBO': 'HBO Max',
   };
   return renames[name] || name;
+}
+
+function buildStreamingUrl(film, source) {
+  const serviceName = (source?.name || source?.source_name || '').toLowerCase();
+  if (serviceName.includes('kanopy')) {
+    const title = (film && film.title) ? film.title : '';
+    if (title) {
+      return `https://www.kanopy.com/en/search?query=${encodeURIComponent(title)}`;
+    }
+    return 'https://www.kanopy.com/en/';
+  }
+  return source?.web_url || source?.link || '';
 }
 
 async function removeMedia(id, tab) {

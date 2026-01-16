@@ -1062,6 +1062,9 @@ function renderBookCard(book) {
   const statusClass = book.status || 'want';
   const statusLabel = { want: 'Want to Read', reading: 'Reading', read: 'Read' }[statusClass] || '';
   const typeLabel = book.is_fiction === true ? 'Fiction' : book.is_fiction === false ? 'Nonfiction' : '';
+  const titleText = escapeHtml(book.title);
+  const creatorText = escapeHtml(book.creator);
+  const amazonUrl = escapeHtml(buildAmazonBookUrl(book.title, book.creator));
 
   return `
     <div class="media-card" data-item-id="${book.id}">
@@ -1070,9 +1073,11 @@ function renderBookCard(book) {
         : '<div class="poster-placeholder">📚</div>'
       }
       <div class="card-body">
-        <div class="card-title" title="${book.title}">${book.title}</div>
+        <div class="card-title">
+          <a class="book-title-link" href="${amazonUrl}" target="_blank" rel="noopener noreferrer" title="${titleText}">${titleText}</a>
+        </div>
         <div class="card-meta">
-          <span>${book.creator}</span>
+          <span>${creatorText}</span>
           ${book.year ? `<span>${book.year}</span>` : ''}
         </div>
         <div class="card-badges">
@@ -1276,6 +1281,11 @@ function escapeHtml(str) {
     '"': '&quot;',
     "'": '&#39;'
   }[char]));
+}
+
+function buildAmazonBookUrl(title, author) {
+  const query = [title, author].filter(Boolean).join(' ').trim();
+  return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&i=stripbooks`;
 }
 
 function scrollToItem(itemId) {

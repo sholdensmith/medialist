@@ -443,6 +443,16 @@ header .subtitle {
   text-overflow: ellipsis;
 }
 
+.media-card .card-title .book-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.media-card .card-title .book-title-link:hover,
+.media-card .card-title .book-title-link:focus {
+  text-decoration: underline;
+}
+
 .media-card .card-meta {
   font-size: 0.8rem;
   color: var(--text-secondary);

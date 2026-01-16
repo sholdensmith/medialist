@@ -1087,7 +1087,6 @@ function renderBookCard(book) {
           ${typeLabel ? `<span class="status-badge type-${book.is_fiction ? 'fiction' : 'nonfiction'}">${typeLabel}</span>` : ''}
         </div>
         <div class="card-actions">
-          <button class="btn btn-small btn-secondary" onclick="openBookModal('${book.id}')">Details</button>
           <button class="btn-remove" onclick="removeMedia('${book.id}', 'books')" title="Remove">&times;</button>
         </div>
       </div>

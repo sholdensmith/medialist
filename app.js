@@ -684,7 +684,7 @@ function displayFilmSearchResults(films) {
           <div class="actions">
             ${isAdded
               ? `<span class="added-indicator" onclick="scrollToItem('watchmode:film:${film.id}')" title="Jump to item">Added</span>`
-              : `<button class="btn btn-small btn-success" onclick='addFilm(${film.id}, ${JSON.stringify(film.name || '')})'>Add</button>`
+              : `<button class="btn btn-small btn-success" onclick='addFilm(${film.id}, ${JSON.stringify(film.name || '')}, ${JSON.stringify(film.year || null)}, ${JSON.stringify(film.image_url || '')})'>Add</button>`
             }
           </div>
         </div>
@@ -693,7 +693,7 @@ function displayFilmSearchResults(films) {
   `;
 }
 
-async function addFilm(watchmodeId, fallbackTitle = '') {
+async function addFilm(watchmodeId, fallbackTitle = '', fallbackYear = null, fallbackImageUrl = '') {
   const watchmodeKey = localStorage.getItem('watchmode_key');
   const country = 'US'; // Default to US region
 
@@ -705,14 +705,21 @@ async function addFilm(watchmodeId, fallbackTitle = '') {
     ]);
 
     let details = {};
-    try {
-      details = await detailsRes.json();
-    } catch (error) {
-      throw new Error('Failed to parse film details');
-    }
-
-    if (!detailsRes.ok) {
-      throw new Error(details?.message || 'Failed to load film details');
+    let detailsErrorMessage = '';
+    if (detailsRes.ok) {
+      try {
+        details = await detailsRes.json();
+      } catch (error) {
+        throw new Error('Failed to parse film details');
+      }
+    } else {
+      try {
+        details = await detailsRes.json();
+      } catch (error) {
+        details = {};
+      }
+      detailsErrorMessage = details?.message || 'Failed to load film details';
+      console.warn('Watchmode details unavailable, using fallback data.', detailsErrorMessage);
     }
 
     let sources = [];
@@ -736,16 +743,22 @@ async function addFilm(watchmodeId, fallbackTitle = '') {
 
     const title = details.title || details.name || fallbackTitle || null;
     if (!title) {
-      throw new Error('Film title is missing from Watchmode');
+      throw new Error(detailsErrorMessage || 'Film title is missing from Watchmode');
     }
+
+    const year = details.year || fallbackYear || null;
+    const imageUrl = details.poster || fallbackImageUrl || null;
+    const streamingSources = Array.isArray(sources)
+      ? sources.filter(s => s.type === 'sub' || s.type === 'free')
+      : [];
 
     const film = {
       id: `watchmode:film:${watchmodeId}`,
       type: 'film',
       title,
       creator: omdbData.Director || details.director || '',
-      year: details.year,
-      image_url: details.poster,
+      year,
+      image_url: imageUrl,
       external_url: details.imdb_id ? `https://www.imdb.com/title/${details.imdb_id}` : null,
       external_id: watchmodeId.toString(),
       imdb_id: details.imdb_id,
@@ -753,7 +766,7 @@ async function addFilm(watchmodeId, fallbackTitle = '') {
       director: omdbData.Director || '',
       awards: omdbData.Awards || '',
       metascore: omdbData.Metascore ? parseInt(omdbData.Metascore) : null,
-      streaming_sources: sources.filter(s => s.type === 'sub' || s.type === 'free'),
+      streaming_sources: streamingSources,
       in_library: false,
       date_added: new Date().toISOString()
     };

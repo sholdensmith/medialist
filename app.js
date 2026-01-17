@@ -684,7 +684,7 @@ function displayFilmSearchResults(films) {
           <div class="actions">
             ${isAdded
               ? `<span class="added-indicator" onclick="scrollToItem('watchmode:film:${film.id}')" title="Jump to item">Added</span>`
-              : `<button class="btn btn-small btn-success" onclick="addFilm(${film.id})">Add</button>`
+              : `<button class="btn btn-small btn-success" onclick='addFilm(${film.id}, ${JSON.stringify(film.name || '')})'>Add</button>`
             }
           </div>
         </div>
@@ -693,7 +693,7 @@ function displayFilmSearchResults(films) {
   `;
 }
 
-async function addFilm(watchmodeId) {
+async function addFilm(watchmodeId, fallbackTitle = '') {
   const watchmodeKey = localStorage.getItem('watchmode_key');
   const country = 'US'; // Default to US region
 
@@ -704,8 +704,25 @@ async function addFilm(watchmodeId) {
       fetch(`https://api.watchmode.com/v1/title/${watchmodeId}/sources/?apiKey=${watchmodeKey}&regions=${country}`)
     ]);
 
-    const details = await detailsRes.json();
-    const sources = await sourcesRes.json();
+    let details = {};
+    try {
+      details = await detailsRes.json();
+    } catch (error) {
+      throw new Error('Failed to parse film details');
+    }
+
+    if (!detailsRes.ok) {
+      throw new Error(details?.message || 'Failed to load film details');
+    }
+
+    let sources = [];
+    if (sourcesRes.ok) {
+      try {
+        sources = await sourcesRes.json();
+      } catch (error) {
+        sources = [];
+      }
+    }
 
     // Try to get additional info from OMDb
     let omdbData = {};
@@ -717,10 +734,15 @@ async function addFilm(watchmodeId) {
       } catch (e) { /* ignore */ }
     }
 
+    const title = details.title || details.name || fallbackTitle || null;
+    if (!title) {
+      throw new Error('Film title is missing from Watchmode');
+    }
+
     const film = {
       id: `watchmode:film:${watchmodeId}`,
       type: 'film',
-      title: details.title,
+      title,
       creator: omdbData.Director || details.director || '',
       year: details.year,
       image_url: details.poster,

@@ -459,8 +459,8 @@ function displayMusicSearchResults(albums) {
           </div>
           <div class="actions">
             ${isAdded
-              ? `<span class="added-indicator" onclick="scrollToItem('spotify:album:${album.id}')" title="Jump to item">Added</span>`
-              : `<button class="btn btn-small btn-success" onclick="addAlbum('${album.id}', '${escapeHtml(album.name)}', '${escapeHtml(album.artists[0]?.name || 'Unknown')}', ${year}, '${coverUrl}', '${album.external_urls.spotify}')">Add</button>`
+              ? `<span class="added-indicator" onclick="scrollToItem('spotify:album:${escapeJs(album.id)}')" title="Jump to item">Added</span>`
+              : `<button class="btn btn-small btn-success" onclick="addAlbum('${escapeJs(album.id)}', '${escapeJs(album.name)}', '${escapeJs(album.artists[0]?.name || 'Unknown')}', ${year}, '${escapeJs(coverUrl)}', '${escapeJs(album.external_urls.spotify)}')">Add</button>`
             }
             <a href="${escapeHtml(spotifyAppUrl)}" target="_blank" class="btn btn-small btn-secondary" onclick="return openSpotifyLink('${album.id}', '${escapeHtml(spotifyWebUrl)}')">Spotify</a>
           </div>
@@ -997,8 +997,8 @@ function displayBookSearchResults(books) {
           </div>
           <div class="actions">
             ${isAdded
-              ? `<span class="added-indicator" onclick="scrollToItem('book:${book.source}:${escapeHtml(book.id)}')" title="Jump to item">Added</span>`
-              : `<button class="btn btn-small btn-success" onclick="addBook('${escapeHtml(book.id)}', '${escapeHtml(book.title)}', '${escapeHtml(book.author)}', ${book.year || 'null'}, '${book.cover || ''}', ${book.pages || 'null'}, '${book.source}')">Add</button>`
+              ? `<span class="added-indicator" onclick="scrollToItem('book:${escapeJs(book.source)}:${escapeJs(book.id)}')" title="Jump to item">Added</span>`
+              : `<button class="btn btn-small btn-success" onclick="addBook('${escapeJs(book.id)}', '${escapeJs(book.title)}', '${escapeJs(book.author)}', ${book.year || 'null'}, '${escapeJs(book.cover || '')}', ${book.pages || 'null'}, '${escapeJs(book.source)}')">Add</button>`
             }
           </div>
         </div>
@@ -1128,7 +1128,7 @@ function renderBookCard(book) {
           ${typeLabel ? `<span class="status-badge type-${book.is_fiction ? 'fiction' : 'nonfiction'}">${typeLabel}</span>` : ''}
         </div>
         <div class="card-actions">
-          <button class="btn-remove" onclick="removeMedia('${book.id}', 'books')" title="Remove">&times;</button>
+          <button class="btn-remove" onclick="removeMedia('${escapeJs(book.id)}', 'books')" title="Remove">&times;</button>
         </div>
       </div>
     </div>
@@ -1144,7 +1144,7 @@ function openBookModal(id) {
     <div class="book-detail-grid">
       <div class="book-detail-row">
         <label>Status</label>
-        <select id="book-status" onchange="updateBookField('${id}', 'status', this.value)">
+        <select id="book-status" onchange="updateBookField('${escapeJs(id)}', 'status', this.value)">
           <option value="want" ${book.status === 'want' ? 'selected' : ''}>Want to Read</option>
           <option value="reading" ${book.status === 'reading' ? 'selected' : ''}>Currently Reading</option>
           <option value="read" ${book.status === 'read' ? 'selected' : ''}>Read</option>
@@ -1152,7 +1152,7 @@ function openBookModal(id) {
       </div>
       <div class="book-detail-row">
         <label>Type</label>
-        <select id="book-type" onchange="updateBookField('${id}', 'is_fiction', this.value === 'true' ? true : this.value === 'false' ? false : null)">
+        <select id="book-type" onchange="updateBookField('${escapeJs(id)}', 'is_fiction', this.value === 'true' ? true : this.value === 'false' ? false : null)">
           <option value="" ${book.is_fiction === null ? 'selected' : ''}>Not Set</option>
           <option value="true" ${book.is_fiction === true ? 'selected' : ''}>Fiction</option>
           <option value="false" ${book.is_fiction === false ? 'selected' : ''}>Nonfiction</option>
@@ -1160,19 +1160,19 @@ function openBookModal(id) {
       </div>
       <div class="book-detail-row">
         <label>Recommended By</label>
-        <input type="text" value="${book.recommended_by || ''}" onchange="updateBookField('${id}', 'recommended_by', this.value)">
+        <input type="text" value="${escapeHtml(book.recommended_by || '')}" onchange="updateBookField('${escapeJs(id)}', 'recommended_by', this.value)">
       </div>
       <div class="book-detail-row">
         <label>Formats Owned</label>
         <div>
           <label class="checkbox-label" style="display: inline-flex; margin-right: 1rem;">
-            <input type="checkbox" ${book.has_audiobook ? 'checked' : ''} onchange="updateBookField('${id}', 'has_audiobook', this.checked)"> Audiobook
+            <input type="checkbox" ${book.has_audiobook ? 'checked' : ''} onchange="updateBookField('${escapeJs(id)}', 'has_audiobook', this.checked)"> Audiobook
           </label>
           <label class="checkbox-label" style="display: inline-flex; margin-right: 1rem;">
-            <input type="checkbox" ${book.has_paperbook ? 'checked' : ''} onchange="updateBookField('${id}', 'has_paperbook', this.checked)"> Paperback
+            <input type="checkbox" ${book.has_paperbook ? 'checked' : ''} onchange="updateBookField('${escapeJs(id)}', 'has_paperbook', this.checked)"> Paperback
           </label>
           <label class="checkbox-label" style="display: inline-flex;">
-            <input type="checkbox" ${book.has_ebook ? 'checked' : ''} onchange="updateBookField('${id}', 'has_ebook', this.checked)"> Ebook
+            <input type="checkbox" ${book.has_ebook ? 'checked' : ''} onchange="updateBookField('${escapeJs(id)}', 'has_ebook', this.checked)"> Ebook
           </label>
         </div>
       </div>
@@ -1181,18 +1181,18 @@ function openBookModal(id) {
         <div>
           <div class="book-tags-container" id="book-tags-${id}">
             ${(book.tags || []).map(tag => `
-              <span class="book-tag">${tag} <button onclick="removeBookTag('${id}', '${tag}')">&times;</button></span>
+              <span class="book-tag">${escapeHtml(tag)} <button onclick="removeBookTag('${escapeJs(id)}', '${escapeJs(tag)}')">&times;</button></span>
             `).join('')}
           </div>
           <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
             <input type="text" id="new-tag-${id}" placeholder="Add tag..." style="flex: 1;">
-            <button class="btn btn-small" onclick="addBookTag('${id}')">Add</button>
+            <button class="btn btn-small" onclick="addBookTag('${escapeJs(id)}')">Add</button>
           </div>
         </div>
       </div>
       <div class="book-detail-row" style="align-items: flex-start;">
         <label>Notes</label>
-        <textarea id="book-notes-${id}" onchange="updateBookField('${id}', 'notes', this.value)">${book.notes || ''}</textarea>
+        <textarea id="book-notes-${id}" onchange="updateBookField('${escapeJs(id)}', 'notes', this.value)">${escapeHtml(book.notes || '')}</textarea>
       </div>
     </div>
   `;
@@ -1325,6 +1325,11 @@ function escapeHtml(str) {
   }[char]));
 }
 
+function escapeJs(str) {
+  if (!str) return '';
+  return str.replace(/[\\']/g, '\\$&').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
+
 function buildAmazonBookUrl(title, author) {
   const query = [title, author].filter(Boolean).join(' ').trim();
   return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&i=stripbooks`;
@@ -1442,7 +1447,7 @@ function openSettings() {
   // Populate tags
   const tagsList = document.getElementById('book-tags-list');
   tagsList.innerHTML = allTags.map(tag => `
-    <span class="tag-item">${tag} <button onclick="deleteGlobalTag('${tag}')">&times;</button></span>
+    <span class="tag-item">${escapeHtml(tag)} <button onclick="deleteGlobalTag('${escapeJs(tag)}')">&times;</button></span>
   `).join('') || '<p style="color: var(--text-secondary)">No tags yet</p>';
 
   // Populate display options

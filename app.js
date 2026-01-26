@@ -845,7 +845,9 @@ function renderFilms() {
             : '<div class="poster-placeholder">🎬</div>'
           }
           <div class="card-body">
-            <div class="card-title" title="${film.title}">${film.title}</div>
+            <div class="card-title" title="${film.title}">
+              <a href="${buildWikipediaUrl(film.title, film.year)}" target="_blank" class="film-title-link">${film.title}</a>
+            </div>
             <div class="card-meta">
               <span>${film.creator || film.director || ''}</span>
               ${film.year ? `<span>${film.year}</span>` : ''}
@@ -1333,6 +1335,12 @@ function escapeJs(str) {
 function buildAmazonBookUrl(title, author) {
   const query = [title, author].filter(Boolean).join(' ').trim();
   return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&i=stripbooks`;
+}
+
+function buildWikipediaUrl(title, year) {
+  // Build Wikipedia search query with title and year for better accuracy
+  const query = year ? `${title} ${year} film` : `${title} film`;
+  return `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`;
 }
 
 function getSpotifyAlbumId(spotifyId, spotifyUrl) {

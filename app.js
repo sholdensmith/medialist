@@ -1338,11 +1338,10 @@ function buildAmazonBookUrl(title, author) {
 }
 
 function buildWikipediaUrl(title, year) {
-  // Build direct Wikipedia article URL
-  // Wikipedia article format: spaces become underscores, year gets added in parentheses
-  const formattedTitle = title.replace(/ /g, '_');
-  const articleName = year ? `${formattedTitle}_(${year}_film)` : `${formattedTitle}_(film)`;
-  return `https://en.wikipedia.org/wiki/${articleName}`;
+  // Use Wikipedia's "go" search which automatically redirects to article if found
+  // Falls back to search results if no exact match
+  const query = year ? `${title} ${year} film` : `${title} film`;
+  return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}&go=Go`;
 }
 
 function getSpotifyAlbumId(spotifyId, spotifyUrl) {

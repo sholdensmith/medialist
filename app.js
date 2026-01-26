@@ -1338,9 +1338,10 @@ function buildAmazonBookUrl(title, author) {
 }
 
 function buildWikipediaUrl(title, year) {
-  // Use Wikipedia's "go" search which automatically redirects to article if found
-  // Falls back to search results if no exact match
-  const query = year ? `${title} ${year} film` : `${title} film`;
+  // Append (film) to help Wikipedia disambiguate from books, people, etc.
+  // Format: "Title (film)" or "Title (year film)"
+  const query = year ? `${title} (${year} film)` : `${title} (film)`;
+  // Use Wikipedia's go search - it will redirect if it finds a matching article
   return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}&go=Go`;
 }
 

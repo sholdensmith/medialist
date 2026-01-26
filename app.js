@@ -1338,9 +1338,10 @@ function buildAmazonBookUrl(title, author) {
 }
 
 function buildWikipediaUrl(title, year) {
-  // Build Wikipedia search query with title and year for better accuracy
+  // Use Wikipedia's "go" search which automatically redirects to article if found
+  // Falls back to search results if no exact match
   const query = year ? `${title} ${year} film` : `${title} film`;
-  return `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`;
+  return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}&go=Go`;
 }
 
 function getSpotifyAlbumId(spotifyId, spotifyUrl) {

@@ -1338,9 +1338,10 @@ function buildAmazonBookUrl(title, author) {
 }
 
 function buildWikipediaUrl(title, year) {
-  // Use Wikipedia's "go" search which automatically redirects to article if found
-  // Just use the title - Wikipedia's search is smart enough to find film articles
-  return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(title)}&go=Go`;
+  // Add (film) to help Wikipedia disambiguate from books, people, etc.
+  // Format: "Title (film)" or "Title (year film)"
+  const query = year ? `${title} (${year} film)` : `${title} (film)`;
+  return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}&go=Go`;
 }
 
 function getSpotifyAlbumId(spotifyId, spotifyUrl) {

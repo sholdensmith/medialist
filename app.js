@@ -684,7 +684,7 @@ function displayFilmSearchResults(films) {
           <div class="actions">
             ${isAdded
               ? `<span class="added-indicator" onclick="scrollToItem('watchmode:film:${film.id}')" title="Jump to item">Added</span>`
-              : `<button class="btn btn-small btn-success" onclick='addFilm(${film.id}, ${JSON.stringify(film.name || '')}, ${JSON.stringify(film.year || null)}, ${JSON.stringify(film.image_url || '')})'>Add</button>`
+              : `<button class="btn btn-small btn-success" onclick="addFilm(${film.id}, '${escapeJs(film.name || '')}', ${film.year || 'null'}, '${escapeJs(film.image_url || '')}')">Add</button>`
             }
           </div>
         </div>

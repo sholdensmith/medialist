@@ -54,6 +54,7 @@ const elements = {
   filmsServiceFilter: document.getElementById('films-service-filter'),
   filmsStreamableFilter: document.getElementById('films-streamable-filter'),
   filmsLibraryFilter: document.getElementById('films-library-filter'),
+  filmsUnavailableFilter: document.getElementById('films-unavailable-filter'),
 
   // Books
   booksSearch: document.getElementById('books-search'),
@@ -196,6 +197,7 @@ function setupEventListeners() {
   elements.filmsServiceFilter.addEventListener('change', renderFilms);
   elements.filmsStreamableFilter.addEventListener('change', renderFilms);
   elements.filmsLibraryFilter.addEventListener('change', renderFilms);
+  elements.filmsUnavailableFilter.addEventListener('change', renderFilms);
 
   // Books
   elements.booksSearchBtn.addEventListener('click', searchBooks);
@@ -788,6 +790,7 @@ function renderFilms() {
   const serviceFilter = elements.filmsServiceFilter.value;
   const streamableFilter = elements.filmsStreamableFilter.checked;
   const libraryFilter = elements.filmsLibraryFilter.checked;
+  const unavailableFilter = elements.filmsUnavailableFilter.checked;
 
   if (streamableFilter) {
     films = films.filter(f => {
@@ -802,6 +805,17 @@ function renderFilms() {
 
   if (libraryFilter) {
     films = films.filter(f => f.in_library);
+  }
+
+  if (unavailableFilter) {
+    films = films.filter(f => {
+      if (f.in_library) return false;
+      const sources = [...(f.streaming_sources || []), ...(f.manual_streaming_sources || [])];
+      if (selectedServices.length > 0) {
+        return !sources.some(s => selectedServices.includes(s.source_id) || selectedServices.includes(s.sourceId));
+      }
+      return sources.length === 0;
+    });
   }
 
   if (serviceFilter) {

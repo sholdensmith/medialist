@@ -10,7 +10,5 @@
 [functions]
   node_bundler = "esbuild"
 
-# Criterion Channel daily sync
-[[functions]]
-  path = "netlify/functions/criterion-sync.js"
+[functions.criterion-sync]
   schedule = "0 2 * * *"  # Daily at 2 AM UTC

@@ -860,7 +860,7 @@ function renderFilms() {
           }
           <div class="card-body">
             <div class="card-title" title="${film.title}">
-              <a href="${buildWikipediaUrl(film.title, film.year)}" target="_blank" class="film-title-link">${film.title}</a>
+              <a href="${buildMetacriticUrl(film.title, film.year)}" target="_blank" class="film-title-link">${film.title}</a>
             </div>
             <div class="card-meta">
               <span>${film.creator || film.director || ''}</span>
@@ -1351,11 +1351,10 @@ function buildAmazonBookUrl(title, author) {
   return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&i=stripbooks`;
 }
 
-function buildWikipediaUrl(title, year) {
-  // Add (film) to help Wikipedia disambiguate from books, people, etc.
-  // Format: "Title (film)" or "Title (year film)"
-  const query = year ? `${title} (${year} film)` : `${title} (film)`;
-  return `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}&go=Go`;
+function buildMetacriticUrl(title, year) {
+  // Metacritic search with title
+  // Search will find the film and show results page
+  return `https://www.metacritic.com/search/movie/${encodeURIComponent(title)}/results`;
 }
 
 function getSpotifyAlbumId(spotifyId, spotifyUrl) {

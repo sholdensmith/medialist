@@ -64,6 +64,15 @@
         </div>
         <button id="music-search-btn" class="btn">Search</button>
       </div>
+      <div class="filter-row">
+        <label class="sort-label">
+          Sort by:
+          <select id="music-sort">
+            <option value="year">Year</option>
+            <option value="title">Title</option>
+          </select>
+        </label>
+      </div>
       <div id="music-search-results" class="search-results hidden"></div>
       <div id="music-list" class="media-grid"></div>
       <div id="music-empty" class="empty-state hidden">
@@ -93,6 +102,13 @@
         </label>
         <label class="checkbox-label">
           <input type="checkbox" id="films-unavailable-filter"> Not Available
+        </label>
+        <label class="sort-label">
+          Sort by:
+          <select id="films-sort">
+            <option value="year">Year</option>
+            <option value="title">Title</option>
+          </select>
         </label>
       </div>
       <div id="films-search-results" class="search-results hidden"></div>
@@ -127,6 +143,13 @@
         <select id="books-tag-filter">
           <option value="">All Tags</option>
         </select>
+        <label class="sort-label">
+          Sort by:
+          <select id="books-sort">
+            <option value="year">Year</option>
+            <option value="title">Title</option>
+          </select>
+        </label>
       </div>
       <div id="books-search-results" class="search-results hidden"></div>
       <div id="books-currently-reading" class="currently-reading hidden"></div>

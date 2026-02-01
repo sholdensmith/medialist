@@ -43,6 +43,7 @@ const elements = {
   musicSearchResults: document.getElementById('music-search-results'),
   musicList: document.getElementById('music-list'),
   musicEmpty: document.getElementById('music-empty'),
+  musicSort: document.getElementById('music-sort'),
 
   // Films
   filmsSearch: document.getElementById('films-search'),
@@ -55,6 +56,7 @@ const elements = {
   filmsStreamableFilter: document.getElementById('films-streamable-filter'),
   filmsLibraryFilter: document.getElementById('films-library-filter'),
   filmsUnavailableFilter: document.getElementById('films-unavailable-filter'),
+  filmsSort: document.getElementById('films-sort'),
 
   // Books
   booksSearch: document.getElementById('books-search'),
@@ -67,6 +69,7 @@ const elements = {
   booksTypeFilter: document.getElementById('books-type-filter'),
   booksTagFilter: document.getElementById('books-tag-filter'),
   booksCurrentlyReading: document.getElementById('books-currently-reading'),
+  booksSort: document.getElementById('books-sort'),
 };
 
 // ============================================================================
@@ -179,6 +182,7 @@ function setupEventListeners() {
     elements.musicSearchResults.classList.add('hidden');
     elements.musicSearch.focus();
   });
+  elements.musicSort.addEventListener('change', renderMusic);
 
   // Films
   elements.filmsSearchBtn.addEventListener('click', searchFilms);
@@ -198,6 +202,7 @@ function setupEventListeners() {
   elements.filmsStreamableFilter.addEventListener('change', renderFilms);
   elements.filmsLibraryFilter.addEventListener('change', renderFilms);
   elements.filmsUnavailableFilter.addEventListener('change', renderFilms);
+  elements.filmsSort.addEventListener('change', renderFilms);
 
   // Books
   elements.booksSearchBtn.addEventListener('click', searchBooks);
@@ -216,6 +221,7 @@ function setupEventListeners() {
   elements.booksStatusFilter.addEventListener('change', renderBooks);
   elements.booksTypeFilter.addEventListener('change', renderBooks);
   elements.booksTagFilter.addEventListener('change', renderBooks);
+  elements.booksSort.addEventListener('change', renderBooks);
 
   // Modal close on backdrop click
   document.querySelectorAll('.modal').forEach(modal => {
@@ -508,8 +514,11 @@ function renderMusic() {
 
   elements.musicEmpty.classList.add('hidden');
 
-  // Group by year
-  const grouped = groupByYear(albums, compareByCreator);
+  // Group by selected sort method
+  const sortBy = elements.musicSort.value;
+  const grouped = sortBy === 'title'
+    ? groupByTitle(albums, compareByCreator)
+    : groupByYear(albums, compareByCreator);
 
   elements.musicList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
@@ -833,8 +842,11 @@ function renderFilms() {
 
   elements.filmsEmpty.classList.add('hidden');
 
-  // Group by year
-  const grouped = groupByYear(films);
+  // Group by selected sort method
+  const sortBy = elements.filmsSort.value;
+  const grouped = sortBy === 'title'
+    ? groupByTitle(films)
+    : groupByYear(films);
 
   elements.filmsList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
@@ -1106,8 +1118,11 @@ function renderBooks() {
 
   elements.booksEmpty.classList.add('hidden');
 
-  // Group by year
-  const grouped = groupByYear(books);
+  // Group by selected sort method
+  const sortBy = elements.booksSort.value;
+  const grouped = sortBy === 'title'
+    ? groupByTitle(books)
+    : groupByYear(books);
 
   elements.booksList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
@@ -1327,6 +1342,34 @@ function groupByYear(items, compareFn = compareByTitle) {
     .map(([year, items]) => {
       items.sort(compareFn);
       return { year, items };
+    });
+}
+
+function groupByTitle(items, compareFn = compareByTitle) {
+  const groups = new Map();
+
+  items.forEach(item => {
+    const title = item.title || item.name || '';
+    const strippedTitle = stripLeadingArticle(title);
+    const firstChar = strippedTitle.charAt(0).toUpperCase();
+    const letter = /[A-Z]/.test(firstChar) ? firstChar : '#';
+
+    if (!groups.has(letter)) {
+      groups.set(letter, []);
+    }
+    groups.get(letter).push(item);
+  });
+
+  // Sort by letter
+  return Array.from(groups.entries())
+    .sort((a, b) => {
+      if (a[0] === '#') return 1;
+      if (b[0] === '#') return -1;
+      return a[0].localeCompare(b[0]);
+    })
+    .map(([letter, items]) => {
+      items.sort(compareFn);
+      return { year: letter, items };
     });
 }
 

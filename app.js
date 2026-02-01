@@ -860,7 +860,7 @@ function renderFilms() {
           }
           <div class="card-body">
             <div class="card-title" title="${film.title}">
-              <a href="${buildMetacriticUrl(film.title, film.year)}" target="_blank" class="film-title-link">${film.title}</a>
+              ${film.title}
             </div>
             <div class="card-meta">
               <span>${film.creator || film.director || ''}</span>
@@ -1349,12 +1349,6 @@ function escapeJs(str) {
 function buildAmazonBookUrl(title, author) {
   const query = [title, author].filter(Boolean).join(' ').trim();
   return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&i=stripbooks`;
-}
-
-function buildMetacriticUrl(title, year) {
-  // Metacritic search with title
-  // Search will find the film and show results page
-  return `https://www.metacritic.com/search/movie/${encodeURIComponent(title)}/results`;
 }
 
 function getSpotifyAlbumId(spotifyId, spotifyUrl) {

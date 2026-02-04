@@ -1216,7 +1216,10 @@ function openBookModal(id) {
             `).join('')}
           </div>
           <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
-            <input type="text" id="new-tag-${id}" placeholder="Add tag..." style="flex: 1;">
+            <input type="text" id="new-tag-${id}" list="all-tags-datalist" placeholder="Add tag..." style="flex: 1;" onkeypress="if(event.key==='Enter') addBookTag('${escapeJs(id)}')">
+            <datalist id="all-tags-datalist">
+              ${allTags.map(tag => `<option value="${escapeHtml(tag)}">`).join('')}
+            </datalist>
             <button class="btn btn-small" onclick="addBookTag('${escapeJs(id)}')">Add</button>
           </div>
         </div>

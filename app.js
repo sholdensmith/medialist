@@ -446,7 +446,8 @@ async function getAlbumInstrumentalness(albumId) {
     );
 
     if (!albumResponse.ok) {
-      console.error('Failed to fetch album tracks');
+      const errorText = await albumResponse.text();
+      console.error('Failed to fetch album tracks:', albumResponse.status, errorText);
       return null;
     }
 
@@ -464,7 +465,8 @@ async function getAlbumInstrumentalness(albumId) {
     );
 
     if (!audioFeaturesResponse.ok) {
-      console.error('Failed to fetch audio features');
+      const errorText = await audioFeaturesResponse.text();
+      console.error('Failed to fetch audio features:', audioFeaturesResponse.status, errorText);
       return null;
     }
 

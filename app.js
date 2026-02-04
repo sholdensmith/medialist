@@ -44,6 +44,7 @@ const elements = {
   musicList: document.getElementById('music-list'),
   musicEmpty: document.getElementById('music-empty'),
   musicVocalFilter: document.getElementById('music-vocal-filter'),
+  musicProcessInstrumentalBtn: document.getElementById('music-process-instrumental-btn'),
   musicSort: document.getElementById('music-sort'),
 
   // Films
@@ -184,6 +185,22 @@ function setupEventListeners() {
     elements.musicSearch.focus();
   });
   elements.musicVocalFilter.addEventListener('change', renderMusic);
+  elements.musicProcessInstrumentalBtn.addEventListener('click', async () => {
+    if (!confirm('This will analyze all albums without vocal/instrumental data. This may take a few minutes. Continue?')) {
+      return;
+    }
+    elements.musicProcessInstrumentalBtn.disabled = true;
+    elements.musicProcessInstrumentalBtn.textContent = 'Processing...';
+    try {
+      const result = await batchProcessAlbumInstrumentalness();
+      alert(`Processing complete!\nProcessed: ${result.processed}\nFailed: ${result.failed}\nTotal: ${result.total}`);
+    } catch (error) {
+      alert('Processing failed: ' + error.message);
+    } finally {
+      elements.musicProcessInstrumentalBtn.disabled = false;
+      elements.musicProcessInstrumentalBtn.textContent = 'Analyze Albums';
+    }
+  });
   elements.musicSort.addEventListener('change', renderMusic);
 
   // Films

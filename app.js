@@ -43,6 +43,7 @@ const elements = {
   musicSearchResults: document.getElementById('music-search-results'),
   musicList: document.getElementById('music-list'),
   musicEmpty: document.getElementById('music-empty'),
+  musicVocalFilter: document.getElementById('music-vocal-filter'),
   musicSort: document.getElementById('music-sort'),
 
   // Films
@@ -182,6 +183,7 @@ function setupEventListeners() {
     elements.musicSearchResults.classList.add('hidden');
     elements.musicSearch.focus();
   });
+  elements.musicVocalFilter.addEventListener('change', renderMusic);
   elements.musicSort.addEventListener('change', renderMusic);
 
   // Films
@@ -416,6 +418,58 @@ async function getSpotifyToken() {
   return spotifyToken;
 }
 
+async function getAlbumInstrumentalness(albumId) {
+  try {
+    const token = await getSpotifyToken();
+
+    // Get album tracks
+    const albumResponse = await fetch(
+      `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=50`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (!albumResponse.ok) {
+      console.error('Failed to fetch album tracks');
+      return null;
+    }
+
+    const albumData = await albumResponse.json();
+    const trackIds = albumData.items.map(track => track.id).filter(id => id);
+
+    if (trackIds.length === 0) {
+      return null;
+    }
+
+    // Get audio features for tracks (batch request, max 100 tracks)
+    const audioFeaturesResponse = await fetch(
+      `https://api.spotify.com/v1/audio-features?ids=${trackIds.join(',')}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (!audioFeaturesResponse.ok) {
+      console.error('Failed to fetch audio features');
+      return null;
+    }
+
+    const featuresData = await audioFeaturesResponse.json();
+    const validFeatures = featuresData.audio_features.filter(f => f && f.instrumentalness !== undefined);
+
+    if (validFeatures.length === 0) {
+      return null;
+    }
+
+    // Calculate average instrumentalness
+    const avgInstrumentalness = validFeatures.reduce((sum, f) => sum + f.instrumentalness, 0) / validFeatures.length;
+
+    // Return true if instrumental (threshold > 0.5), false if vocal
+    return avgInstrumentalness > 0.5;
+
+  } catch (error) {
+    console.error('Error getting instrumentalness:', error);
+    return null;
+  }
+}
+
 async function searchMusic() {
   const query = elements.musicSearch.value.trim();
   if (!query) return;
@@ -479,6 +533,9 @@ function displayMusicSearchResults(albums) {
 }
 
 async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
+  // Fetch instrumentalness in the background
+  const isInstrumental = await getAlbumInstrumentalness(spotifyId);
+
   const album = {
     id: `spotify:album:${spotifyId}`,
     type: 'album',
@@ -490,6 +547,7 @@ async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
     external_id: spotifyId,
     spotify_id: spotifyId,
     spotify_url: spotifyUrl,
+    is_instrumental: isInstrumental,
     date_added: new Date().toISOString()
   };
 
@@ -504,7 +562,16 @@ async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
 }
 
 function renderMusic() {
-  const albums = mediaList.filter(m => m.type === 'album');
+  let albums = mediaList.filter(m => m.type === 'album');
+
+  // Apply vocal/instrumental filter
+  const vocalFilter = elements.musicVocalFilter.value;
+  if (vocalFilter === 'instrumental') {
+    albums = albums.filter(a => a.is_instrumental === true);
+  } else if (vocalFilter === 'vocal') {
+    albums = albums.filter(a => a.is_instrumental === false);
+  }
+  // If filter is '' (All Albums), show all albums regardless of is_instrumental value
 
   if (albums.length === 0) {
     elements.musicList.innerHTML = '';
@@ -546,6 +613,47 @@ function renderMusic() {
     `;
     }).join('')}
   `).join('');
+}
+
+// Make batch processing function available globally for manual execution
+window.batchProcessAlbumInstrumentalness = batchProcessAlbumInstrumentalness;
+
+async function batchProcessAlbumInstrumentalness() {
+  const albums = mediaList.filter(m => m.type === 'album' && m.is_instrumental === undefined);
+
+  if (albums.length === 0) {
+    console.log('No albums need instrumentalness processing');
+    return { processed: 0, total: 0 };
+  }
+
+  console.log(`Processing instrumentalness for ${albums.length} albums...`);
+  let processed = 0;
+  let failed = 0;
+
+  for (const album of albums) {
+    try {
+      const isInstrumental = await getAlbumInstrumentalness(album.spotify_id || album.external_id);
+
+      // Update album with instrumentalness data
+      album.is_instrumental = isInstrumental;
+      await saveItem(album);
+
+      processed++;
+      console.log(`Processed ${processed}/${albums.length}: ${album.title} - ${isInstrumental === true ? 'Instrumental' : isInstrumental === false ? 'Vocal' : 'Unknown'}`);
+
+      // Small delay to avoid rate limiting (Spotify allows ~180 requests per minute)
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+    } catch (error) {
+      console.error(`Failed to process ${album.title}:`, error);
+      failed++;
+    }
+  }
+
+  console.log(`Batch processing complete. Processed: ${processed}, Failed: ${failed}`);
+  renderMusic();
+
+  return { processed, failed, total: albums.length };
 }
 
 // ============================================================================

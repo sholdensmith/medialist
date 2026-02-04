@@ -582,7 +582,7 @@ function renderMusic() {
   let albums = mediaList.filter(m => m.type === 'album');
 
   // Show/hide analyze button based on whether any albums need processing
-  const needsProcessing = albums.some(a => a.is_instrumental === undefined);
+  const needsProcessing = albums.some(a => a.is_instrumental === undefined || a.is_instrumental === null);
   elements.musicProcessInstrumentalBtn.style.display = needsProcessing ? '' : 'none';
 
   // Apply vocal/instrumental filter
@@ -640,7 +640,7 @@ function renderMusic() {
 window.batchProcessAlbumInstrumentalness = batchProcessAlbumInstrumentalness;
 
 async function batchProcessAlbumInstrumentalness() {
-  const albums = mediaList.filter(m => m.type === 'album' && m.is_instrumental === undefined);
+  const albums = mediaList.filter(m => m.type === 'album' && (m.is_instrumental === undefined || m.is_instrumental === null));
 
   if (albums.length === 0) {
     console.log('No albums need instrumentalness processing');

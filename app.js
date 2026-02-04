@@ -581,6 +581,10 @@ async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
 function renderMusic() {
   let albums = mediaList.filter(m => m.type === 'album');
 
+  // Show/hide analyze button based on whether any albums need processing
+  const needsProcessing = albums.some(a => a.is_instrumental === undefined);
+  elements.musicProcessInstrumentalBtn.style.display = needsProcessing ? '' : 'none';
+
   // Apply vocal/instrumental filter
   const vocalFilter = elements.musicVocalFilter.value;
   if (vocalFilter === 'instrumental') {

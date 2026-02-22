@@ -851,7 +851,14 @@ function renderFilms() {
   elements.filmsList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
     ${items.map(film => {
-      const allSources = [...(film.streaming_sources || []), ...(film.manual_streaming_sources || [])];
+      const mergedSources = [...(film.streaming_sources || []), ...(film.manual_streaming_sources || [])];
+      const seen = new Set();
+      const allSources = mergedSources.filter(s => {
+        const id = s.source_id || s.sourceId;
+        if (id && seen.has(id)) return false;
+        if (id) seen.add(id);
+        return true;
+      });
       // Only show services the user has selected
       const sources = selectedServices.length > 0
         ? allSources.filter(s => selectedServices.includes(s.source_id) || selectedServices.includes(s.sourceId))

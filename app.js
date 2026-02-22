@@ -882,6 +882,7 @@ function renderFilms() {
             ${streamingBadges ? `<div class="streaming-badges">${streamingBadges}</div>` : ''}
             <div class="card-actions">
               <button class="btn btn-small ${film.in_library ? 'btn-success' : 'btn-secondary'}" onclick="toggleFilmLibrary('${film.id}')">${film.in_library ? 'In Library' : 'Add to Library'}</button>
+              ${film.external_id ? `<button class="btn-refresh" data-refresh-id="${film.id}" onclick="refreshFilmSources('${film.id}')" title="Refresh streaming sources">↻</button>` : ''}
               <button class="btn-remove" onclick="removeMedia('${film.id}', 'films')" title="Remove">&times;</button>
             </div>
           </div>
@@ -889,6 +890,47 @@ function renderFilms() {
       `;
     }).join('')}
   `).join('');
+}
+
+async function refreshFilmSources(filmId) {
+  const film = mediaList.find(m => m.id === filmId);
+  if (!film || !film.external_id) return;
+
+  const watchmodeKey = localStorage.getItem('watchmode_key');
+  if (!watchmodeKey) {
+    alert('Watchmode API key not configured');
+    return;
+  }
+
+  const btn = document.querySelector(`[data-refresh-id="${filmId}"]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.watchmode.com/v1/title/${film.external_id}/sources/?apiKey=${watchmodeKey}&regions=US`
+    );
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+    const sources = await response.json();
+    film.streaming_sources = Array.isArray(sources)
+      ? sources.filter(s => s.type === 'sub' || s.type === 'free')
+      : [];
+    film.sources_last_synced = new Date().toISOString();
+
+    await saveItem(film);
+    renderFilms();
+  } catch (error) {
+    console.error('Failed to refresh sources:', error);
+    alert('Failed to refresh streaming sources: ' + error.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '↻';
+    }
+  }
 }
 
 async function toggleFilmLibrary(id) {
@@ -1698,6 +1740,7 @@ window.addBook = addBook;
 window.removeMedia = removeMedia;
 window.scrollToItem = scrollToItem;
 window.toggleFilmLibrary = toggleFilmLibrary;
+window.refreshFilmSources = refreshFilmSources;
 window.openBookModal = openBookModal;
 window.updateBookField = updateBookField;
 window.addBookTag = addBookTag;

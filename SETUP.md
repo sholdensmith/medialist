@@ -144,6 +144,10 @@ node migrate.js
 3. Set environment variables in Netlify dashboard:
    - `SPOTIFY_CLIENT_ID`
    - `SPOTIFY_CLIENT_SECRET`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `FIRECRAWL_API_KEY`
+   - `WATCHMODE_API_KEY`
 4. Deploy!
 
 The Spotify credentials need to be server-side (via Netlify Functions) because Spotify requires the client secret which shouldn't be exposed to browsers.

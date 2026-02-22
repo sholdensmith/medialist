@@ -10,6 +10,7 @@ export const handler = async (event, context) => {
     matched: 0,
     updated: 0,
     skipped: 0,
+    removed: 0,
     errors: []
   };
 
@@ -73,6 +74,47 @@ export const handler = async (event, context) => {
         });
         console.error(`✗ Error updating ${supabaseFilm.title}:`, err.message);
       }
+    }
+
+    // 5. Remove Criterion from films no longer on Criterion Channel
+    if (criterionFilms.length >= 100) {
+      const matchedIds = new Set(matches.map(m => m.supabaseFilm.id));
+
+      for (const film of supabaseFilms) {
+        try {
+          const manualSources = film.manual_streaming_sources || [];
+          const hasCriterion = manualSources.some(s =>
+            s.source_id === 203 ||
+            s.sourceId === 203 ||
+            (s.name && s.name.toLowerCase().includes('criterion'))
+          );
+
+          if (!hasCriterion) continue;
+          if (matchedIds.has(film.id)) continue;
+
+          const updatedSources = manualSources.filter(s =>
+            s.source_id !== 203 &&
+            s.sourceId !== 203 &&
+            !(s.name && s.name.toLowerCase().includes('criterion'))
+          );
+
+          await updateFilm(film.id, {
+            manual_streaming_sources: updatedSources
+          });
+
+          log.removed++;
+          console.log(`- Removed Criterion from: ${film.title} (${film.year})`);
+
+        } catch (err) {
+          log.errors.push({
+            film: film.title,
+            error: `removal: ${err.message}`
+          });
+          console.error(`✗ Error removing Criterion from ${film.title}:`, err.message);
+        }
+      }
+    } else {
+      console.warn(`Skipping removal: only ${criterionFilms.length} films scraped (expected 100+)`);
     }
 
     const duration = Date.now() - startTime;

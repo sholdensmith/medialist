@@ -304,6 +304,22 @@ header .subtitle {
   display: none;
 }
 
+.search-mode-select {
+  padding: 0.75rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.search-mode-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* Filter Row */
 .filter-row {
   display: flex;
@@ -325,6 +341,26 @@ header .subtitle {
 }
 
 .filter-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.list-filter {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  min-width: 120px;
+  max-width: 200px;
+}
+
+.list-filter::placeholder {
+  color: var(--text-secondary);
+}
+
+.list-filter:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -882,6 +918,11 @@ a.streaming-badge:hover {
 
   .filter-row select {
     width: 100%;
+  }
+
+  .list-filter {
+    width: 100%;
+    max-width: none;
   }
 
   .search-result-item {

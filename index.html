@@ -36,6 +36,11 @@
         <input type="text" id="setup-omdb-key" placeholder="OMDb API Key">
       </div>
 
+      <div class="setup-section">
+        <h3>TMDB (for Director Search)</h3>
+        <input type="text" id="setup-tmdb-key" placeholder="TMDB Read Access Token">
+      </div>
+
       <button id="setup-save-btn" class="btn btn-primary">Save & Continue</button>
     </div>
   </div>
@@ -65,6 +70,7 @@
         <button id="music-search-btn" class="btn">Search</button>
       </div>
       <div class="filter-row">
+        <input type="text" id="music-filter" class="list-filter" placeholder="Filter list...">
         <label class="sort-label">
           Sort by:
           <select id="music-sort">
@@ -84,6 +90,10 @@
     <!-- Films Tab -->
     <section id="films-tab" class="tab-content hidden">
       <div class="search-container">
+        <select id="films-search-mode" class="search-mode-select">
+          <option value="title">Title</option>
+          <option value="director">Director</option>
+        </select>
         <div class="search-input-wrapper">
           <input type="text" id="films-search" placeholder="Search for films...">
           <button id="films-search-clear" class="search-clear-btn hidden" title="Clear search">&times;</button>
@@ -91,6 +101,7 @@
         <button id="films-search-btn" class="btn">Search</button>
       </div>
       <div class="filter-row">
+        <input type="text" id="films-filter" class="list-filter" placeholder="Filter list...">
         <select id="films-service-filter">
           <option value="">All Services</option>
         </select>
@@ -129,6 +140,7 @@
         <button id="books-search-btn" class="btn">Search</button>
       </div>
       <div class="filter-row">
+        <input type="text" id="books-filter" class="list-filter" placeholder="Filter list...">
         <select id="books-status-filter">
           <option value="">All Status</option>
           <option value="want">Want to Read</option>
@@ -194,6 +206,10 @@
           <label>
             OMDb API Key (Optional)
             <input type="text" id="settings-omdb-key">
+          </label>
+          <label>
+            TMDB Read Access Token (for Director Search)
+            <input type="text" id="settings-tmdb-key">
           </label>
           <button id="settings-save-keys" class="btn">Save Keys</button>
         </div>

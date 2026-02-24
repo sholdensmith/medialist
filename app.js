@@ -20,6 +20,7 @@ const CONFIG_KEYS = [
   'spotify_client_secret',
   'watchmode_key',
   'omdb_key',
+  'tmdb_key',
   'selected_country',
   'selected_services'
 ];
@@ -44,14 +45,17 @@ const elements = {
   musicList: document.getElementById('music-list'),
   musicEmpty: document.getElementById('music-empty'),
   musicSort: document.getElementById('music-sort'),
+  musicFilter: document.getElementById('music-filter'),
 
   // Films
   filmsSearch: document.getElementById('films-search'),
+  filmsSearchMode: document.getElementById('films-search-mode'),
   filmsSearchBtn: document.getElementById('films-search-btn'),
   filmsSearchClear: document.getElementById('films-search-clear'),
   filmsSearchResults: document.getElementById('films-search-results'),
   filmsList: document.getElementById('films-list'),
   filmsEmpty: document.getElementById('films-empty'),
+  filmsFilter: document.getElementById('films-filter'),
   filmsServiceFilter: document.getElementById('films-service-filter'),
   filmsStreamableFilter: document.getElementById('films-streamable-filter'),
   filmsLibraryFilter: document.getElementById('films-library-filter'),
@@ -70,6 +74,7 @@ const elements = {
   booksTagFilter: document.getElementById('books-tag-filter'),
   booksCurrentlyReading: document.getElementById('books-currently-reading'),
   booksSort: document.getElementById('books-sort'),
+  booksFilter: document.getElementById('books-filter'),
 };
 
 // ============================================================================
@@ -142,6 +147,7 @@ function saveSetup() {
   localStorage.setItem('spotify_client_secret', document.getElementById('setup-spotify-client-secret').value.trim());
   localStorage.setItem('watchmode_key', document.getElementById('setup-watchmode-key').value.trim());
   localStorage.setItem('omdb_key', document.getElementById('setup-omdb-key').value.trim());
+  localStorage.setItem('tmdb_key', document.getElementById('setup-tmdb-key').value.trim());
 
   location.reload();
 }
@@ -183,6 +189,7 @@ function setupEventListeners() {
     elements.musicSearch.focus();
   });
   elements.musicSort.addEventListener('change', renderMusic);
+  elements.musicFilter.addEventListener('input', debounce(renderMusic, 150));
 
   // Films
   elements.filmsSearchBtn.addEventListener('click', searchFilms);
@@ -198,11 +205,17 @@ function setupEventListeners() {
     elements.filmsSearchResults.classList.add('hidden');
     elements.filmsSearch.focus();
   });
+  elements.filmsSearchMode.addEventListener('change', () => {
+    elements.filmsSearch.placeholder = elements.filmsSearchMode.value === 'director'
+      ? 'Search by director name...'
+      : 'Search for films...';
+  });
   elements.filmsServiceFilter.addEventListener('change', renderFilms);
   elements.filmsStreamableFilter.addEventListener('change', renderFilms);
   elements.filmsLibraryFilter.addEventListener('change', renderFilms);
   elements.filmsUnavailableFilter.addEventListener('change', renderFilms);
   elements.filmsSort.addEventListener('change', renderFilms);
+  elements.filmsFilter.addEventListener('input', debounce(renderFilms, 150));
 
   // Books
   elements.booksSearchBtn.addEventListener('click', searchBooks);
@@ -222,6 +235,7 @@ function setupEventListeners() {
   elements.booksTypeFilter.addEventListener('change', renderBooks);
   elements.booksTagFilter.addEventListener('change', renderBooks);
   elements.booksSort.addEventListener('change', renderBooks);
+  elements.booksFilter.addEventListener('input', debounce(renderBooks, 150));
 
   // Modal close on backdrop click
   document.querySelectorAll('.modal').forEach(modal => {
@@ -504,7 +518,15 @@ async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
 }
 
 function renderMusic() {
-  const albums = mediaList.filter(m => m.type === 'album');
+  let albums = mediaList.filter(m => m.type === 'album');
+
+  const filterQuery = (elements.musicFilter?.value || '').trim().toLowerCase();
+  if (filterQuery) {
+    albums = albums.filter(a =>
+      a.title.toLowerCase().includes(filterQuery) ||
+      (a.creator || '').toLowerCase().includes(filterQuery)
+    );
+  }
 
   if (albums.length === 0) {
     elements.musicList.innerHTML = '';
@@ -647,6 +669,15 @@ async function searchFilms() {
   const query = elements.filmsSearch.value.trim();
   if (!query) return;
 
+  const mode = elements.filmsSearchMode.value;
+  if (mode === 'director') {
+    await searchFilmsByDirector(query);
+  } else {
+    await searchFilmsByTitle(query);
+  }
+}
+
+async function searchFilmsByTitle(query) {
   const watchmodeKey = localStorage.getItem('watchmode_key');
   if (!watchmodeKey) {
     alert('Watchmode API key not configured');
@@ -669,6 +700,204 @@ async function searchFilms() {
   } catch (error) {
     console.error('Film search error:', error);
     elements.filmsSearchResults.innerHTML = `<p style="color: var(--accent);">Search failed: ${error.message}</p>`;
+  }
+}
+
+async function searchFilmsByDirector(query) {
+  const tmdbKey = localStorage.getItem('tmdb_key');
+  if (!tmdbKey) {
+    alert('TMDB API key not configured. Add it in Settings to search by director.');
+    return;
+  }
+
+  elements.filmsSearchResults.innerHTML = '<div class="loading">Searching directors</div>';
+  elements.filmsSearchResults.classList.remove('hidden');
+
+  try {
+    const personRes = await fetch(
+      `https://api.themoviedb.org/3/search/person?query=${encodeURIComponent(query)}&language=en-US&page=1`,
+      { headers: { 'Authorization': `Bearer ${tmdbKey}` } }
+    );
+
+    if (!personRes.ok) throw new Error('TMDB person search failed');
+
+    const personData = await personRes.json();
+    const directors = (personData.results || []).filter(
+      p => p.known_for_department === 'Directing'
+    );
+
+    if (directors.length === 0) {
+      elements.filmsSearchResults.innerHTML = personData.results?.length > 0
+        ? '<p>No directors found matching that name. Try a title search instead.</p>'
+        : '<p>No results found</p>';
+      return;
+    }
+
+    const director = directors[0];
+
+    const creditsRes = await fetch(
+      `https://api.themoviedb.org/3/person/${director.id}/movie_credits?language=en-US`,
+      { headers: { 'Authorization': `Bearer ${tmdbKey}` } }
+    );
+
+    if (!creditsRes.ok) throw new Error('Failed to fetch filmography');
+
+    const creditsData = await creditsRes.json();
+    const directedFilms = (creditsData.crew || [])
+      .filter(c => c.job === 'Director')
+      .sort((a, b) => (b.release_date || '').localeCompare(a.release_date || ''));
+
+    displayDirectorSearchResults(director, directedFilms);
+
+  } catch (error) {
+    console.error('Director search error:', error);
+    elements.filmsSearchResults.innerHTML = `<p style="color: var(--accent);">Director search failed: ${error.message}</p>`;
+  }
+}
+
+function displayDirectorSearchResults(director, films) {
+  if (films.length === 0) {
+    elements.filmsSearchResults.innerHTML = `<p>No directed films found for ${escapeHtml(director.name)}</p>`;
+    return;
+  }
+
+  const existingFilms = mediaList.filter(m => m.type === 'film');
+  const existingKeys = new Set(existingFilms.map(m => `${m.title}:${m.year}`));
+
+  const profileImg = director.profile_path
+    ? `https://image.tmdb.org/t/p/w185${director.profile_path}`
+    : '';
+
+  elements.filmsSearchResults.innerHTML = `
+    <h3>
+      ${profileImg ? `<img src="${profileImg}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;margin-right:0.5rem;vertical-align:middle;">` : ''}
+      ${escapeHtml(director.name)} — Filmography (${films.length})
+      <button class="close-btn" onclick="this.closest('.search-results').classList.add('hidden')">&times;</button>
+    </h3>
+    ${films.slice(0, 30).map(film => {
+      const year = film.release_date ? parseInt(film.release_date.substring(0, 4)) : null;
+      const posterUrl = film.poster_path
+        ? `https://image.tmdb.org/t/p/w92${film.poster_path}`
+        : '';
+      const key = `${film.title}:${year}`;
+      const isAdded = existingKeys.has(key);
+
+      return `
+        <div class="search-result-item">
+          <img src="${posterUrl}" alt="${escapeHtml(film.title)}" onerror="this.style.display='none'">
+          <div class="info">
+            <div class="title">${escapeHtml(film.title)}</div>
+            <div class="meta">${year || 'TBA'}${film.vote_average ? ` · ${film.vote_average.toFixed(1)} ★` : ''}</div>
+          </div>
+          <div class="actions">
+            ${isAdded
+              ? '<span class="added-indicator">Added</span>'
+              : `<button class="btn btn-small btn-success" onclick="addFilmFromTmdb(${film.id}, '${escapeJs(film.title)}', ${year || 'null'}, '${escapeJs(posterUrl)}', '${escapeJs(director.name)}')">Add</button>`
+            }
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+async function addFilmFromTmdb(tmdbId, title, year, posterUrl, directorName) {
+  const tmdbKey = localStorage.getItem('tmdb_key');
+  const watchmodeKey = localStorage.getItem('watchmode_key');
+  const omdbKey = localStorage.getItem('omdb_key');
+
+  try {
+    // Get TMDB movie details for IMDB ID
+    const tmdbDetailRes = await fetch(
+      `https://api.themoviedb.org/3/movie/${tmdbId}?language=en-US&append_to_response=external_ids`,
+      { headers: { 'Authorization': `Bearer ${tmdbKey}` } }
+    );
+
+    let tmdbDetails = {};
+    if (tmdbDetailRes.ok) {
+      tmdbDetails = await tmdbDetailRes.json();
+    }
+
+    const imdbId = tmdbDetails.imdb_id || tmdbDetails.external_ids?.imdb_id || null;
+    const runtime = tmdbDetails.runtime || null;
+    const fullPosterUrl = tmdbDetails.poster_path
+      ? `https://image.tmdb.org/t/p/w500${tmdbDetails.poster_path}`
+      : posterUrl;
+
+    // Try to find Watchmode ID via IMDB ID for streaming sources
+    let watchmodeId = null;
+    let streamingSources = [];
+
+    if (watchmodeKey && imdbId) {
+      try {
+        const wmSearchRes = await fetch(
+          `https://api.watchmode.com/v1/search/?apiKey=${watchmodeKey}&search_field=imdb_id&search_value=${imdbId}`
+        );
+        if (wmSearchRes.ok) {
+          const wmSearchData = await wmSearchRes.json();
+          if (wmSearchData.title_results && wmSearchData.title_results.length > 0) {
+            watchmodeId = wmSearchData.title_results[0].id;
+          }
+        }
+      } catch (e) { /* continue without Watchmode */ }
+    }
+
+    if (watchmodeKey && watchmodeId) {
+      try {
+        const sourcesRes = await fetch(
+          `https://api.watchmode.com/v1/title/${watchmodeId}/sources/?apiKey=${watchmodeKey}&regions=US`
+        );
+        if (sourcesRes.ok) {
+          const sources = await sourcesRes.json();
+          streamingSources = Array.isArray(sources)
+            ? sources.filter(s => s.type === 'sub' || s.type === 'free')
+            : [];
+        }
+      } catch (e) { /* continue without sources */ }
+    }
+
+    // Optionally fetch OMDb data
+    let omdbData = {};
+    if (omdbKey && imdbId) {
+      try {
+        const omdbRes = await fetch(`https://www.omdbapi.com/?apikey=${omdbKey}&i=${imdbId}`);
+        if (omdbRes.ok) omdbData = await omdbRes.json();
+      } catch (e) { /* ignore */ }
+    }
+
+    const filmId = watchmodeId
+      ? `watchmode:film:${watchmodeId}`
+      : `tmdb:film:${tmdbId}`;
+
+    const film = {
+      id: filmId,
+      type: 'film',
+      title: title,
+      creator: omdbData.Director || directorName || '',
+      year: year,
+      image_url: fullPosterUrl,
+      external_url: imdbId ? `https://www.imdb.com/title/${imdbId}` : null,
+      external_id: watchmodeId ? watchmodeId.toString() : tmdbId.toString(),
+      imdb_id: imdbId,
+      runtime: runtime || (omdbData.Runtime ? parseInt(omdbData.Runtime) : null),
+      director: omdbData.Director || directorName || '',
+      awards: omdbData.Awards || '',
+      metascore: omdbData.Metascore ? parseInt(omdbData.Metascore) : null,
+      streaming_sources: streamingSources,
+      in_library: false,
+      date_added: new Date().toISOString()
+    };
+
+    await saveItem(film);
+    renderFilms();
+
+    // Refresh search results to show "Added"
+    const query = elements.filmsSearch.value.trim();
+    if (query) await searchFilmsByDirector(query);
+
+  } catch (error) {
+    console.error('Failed to add film from TMDB:', error);
+    alert('Failed to add film: ' + error.message);
   }
 }
 
@@ -794,6 +1023,16 @@ async function addFilm(watchmodeId, fallbackTitle = '', fallbackYear = null, fal
 
 function renderFilms() {
   let films = mediaList.filter(m => m.type === 'film');
+
+  // Apply text filter
+  const filterQuery = (elements.filmsFilter?.value || '').trim().toLowerCase();
+  if (filterQuery) {
+    films = films.filter(f =>
+      f.title.toLowerCase().includes(filterQuery) ||
+      (f.creator || '').toLowerCase().includes(filterQuery) ||
+      (f.director || '').toLowerCase().includes(filterQuery)
+    );
+  }
 
   // Apply filters
   const serviceFilter = elements.filmsServiceFilter.value;
@@ -1117,6 +1356,15 @@ async function addBook(externalId, title, author, year, cover, pages, source) {
 function renderBooks() {
   let books = mediaList.filter(m => m.type === 'book');
 
+  // Apply text filter
+  const filterQuery = (elements.booksFilter?.value || '').trim().toLowerCase();
+  if (filterQuery) {
+    books = books.filter(b =>
+      b.title.toLowerCase().includes(filterQuery) ||
+      (b.creator || '').toLowerCase().includes(filterQuery)
+    );
+  }
+
   // Apply filters
   const statusFilter = elements.booksStatusFilter.value;
   const typeFilter = elements.booksTypeFilter.value;
@@ -1141,7 +1389,13 @@ function renderBooks() {
   }
 
   // Currently reading section
-  const currentlyReading = mediaList.filter(m => m.type === 'book' && m.status === 'reading');
+  let currentlyReading = mediaList.filter(m => m.type === 'book' && m.status === 'reading');
+  if (filterQuery) {
+    currentlyReading = currentlyReading.filter(b =>
+      b.title.toLowerCase().includes(filterQuery) ||
+      (b.creator || '').toLowerCase().includes(filterQuery)
+    );
+  }
   if (currentlyReading.length > 0 && !statusFilter) {
     elements.booksCurrentlyReading.classList.remove('hidden');
     elements.booksCurrentlyReading.innerHTML = `
@@ -1425,6 +1679,14 @@ function groupByTitle(items, compareFn = compareByTitle) {
     });
 }
 
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/[&<>"']/g, char => ({
@@ -1554,6 +1816,7 @@ function openSettings() {
   document.getElementById('settings-spotify-client-secret').value = localStorage.getItem('spotify_client_secret') || '';
   document.getElementById('settings-watchmode-key').value = localStorage.getItem('watchmode_key') || '';
   document.getElementById('settings-omdb-key').value = localStorage.getItem('omdb_key') || '';
+  document.getElementById('settings-tmdb-key').value = localStorage.getItem('tmdb_key') || '';
 
   // Populate tags
   const tagsList = document.getElementById('book-tags-list');
@@ -1582,6 +1845,7 @@ function saveSettings() {
   localStorage.setItem('spotify_client_secret', document.getElementById('settings-spotify-client-secret').value.trim());
   localStorage.setItem('watchmode_key', document.getElementById('settings-watchmode-key').value.trim());
   localStorage.setItem('omdb_key', document.getElementById('settings-omdb-key').value.trim());
+  localStorage.setItem('tmdb_key', document.getElementById('settings-tmdb-key').value.trim());
 
   alert('Settings saved! Reload to apply changes.');
 }
@@ -1743,6 +2007,7 @@ function convertFilmWatchlistFormat(watchlist) {
 // Make functions available globally
 window.addAlbum = addAlbum;
 window.addFilm = addFilm;
+window.addFilmFromTmdb = addFilmFromTmdb;
 window.addBook = addBook;
 window.removeMedia = removeMedia;
 window.scrollToItem = scrollToItem;

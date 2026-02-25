@@ -547,21 +547,23 @@ function renderMusic() {
     ${items.map(album => {
       const spotifyWebUrl = buildSpotifyWebUrl(album.spotify_id, album.spotify_url || album.external_url);
       const spotifyAppUrl = buildSpotifyAppUrl(album.spotify_id, spotifyWebUrl);
+      const titleText = escapeHtml(album.title);
+      const creatorText = escapeHtml(album.creator);
       return `
-      <div class="media-card" data-item-id="${album.id}">
+      <div class="media-card" data-item-id="${escapeHtml(album.id)}">
         ${album.image_url
-          ? `<img class="poster" src="${album.image_url}" alt="${album.title}">`
+          ? `<img class="poster" src="${escapeHtml(album.image_url)}" alt="${titleText}">`
           : '<div class="poster-placeholder">🎵</div>'
         }
         <div class="card-body">
-          <div class="card-title" title="${album.title}">${album.title}</div>
+          <div class="card-title" title="${titleText}">${titleText}</div>
           <div class="card-meta">
-            <span>${album.creator}</span>
+            <span>${creatorText}</span>
             ${album.year ? `<span>${album.year}</span>` : ''}
           </div>
           <div class="card-actions">
             <a href="${escapeHtml(spotifyAppUrl)}" target="_blank" class="btn btn-secondary" onclick="return openSpotifyLink('${escapeHtml(album.spotify_id || '')}', '${escapeHtml(spotifyWebUrl)}')">Spotify</a>
-            <button class="btn-remove" onclick="removeMedia('${album.id}', 'music')" title="Remove">&times;</button>
+            <button class="btn-remove" onclick="removeMedia('${escapeJs(album.id)}', 'music')" title="Remove">&times;</button>
           </div>
         </div>
       </div>
@@ -1110,26 +1112,30 @@ function renderFilms() {
         return `<span class="streaming-badge">${formatServiceName(s.name)}</span>`;
       }).join('');
 
+      const titleText = escapeHtml(film.title);
+      const creatorText = escapeHtml(film.creator || film.director || '');
+      const filmIdJs = escapeJs(film.id);
+
       return `
-        <div class="media-card" data-item-id="${film.id}">
+        <div class="media-card" data-item-id="${escapeHtml(film.id)}">
           ${film.image_url
-            ? `<img class="poster" src="${film.image_url}" alt="${film.title}">`
+            ? `<img class="poster" src="${escapeHtml(film.image_url)}" alt="${titleText}">`
             : '<div class="poster-placeholder">🎬</div>'
           }
           <div class="card-body">
-            <div class="card-title" title="${film.title}">
-              ${film.title}
+            <div class="card-title" title="${titleText}">
+              ${titleText}
             </div>
             <div class="card-meta">
-              <span>${film.creator || film.director || ''}</span>
+              <span>${creatorText}</span>
               ${film.year ? `<span>${film.year}</span>` : ''}
               ${film.runtime ? `<span>${formatRuntime(film.runtime)}</span>` : ''}
             </div>
             ${streamingBadges ? `<div class="streaming-badges">${streamingBadges}</div>` : ''}
             <div class="card-actions">
-              <button class="btn btn-small ${film.in_library ? 'btn-success' : 'btn-secondary'}" onclick="toggleFilmLibrary('${film.id}')">${film.in_library ? 'In Library' : 'Add to Library'}</button>
-              ${film.external_id ? `<button class="btn-refresh" data-refresh-id="${film.id}" onclick="refreshFilmSources('${film.id}')" title="Refresh streaming sources">↻</button>` : ''}
-              <button class="btn-remove" onclick="removeMedia('${film.id}', 'films')" title="Remove">&times;</button>
+              <button class="btn btn-small ${film.in_library ? 'btn-success' : 'btn-secondary'}" onclick="toggleFilmLibrary('${filmIdJs}')">${film.in_library ? 'In Library' : 'Add to Library'}</button>
+              ${film.external_id ? `<button class="btn-refresh" data-refresh-id="${escapeHtml(film.id)}" onclick="refreshFilmSources('${filmIdJs}')" title="Refresh streaming sources">↻</button>` : ''}
+              <button class="btn-remove" onclick="removeMedia('${filmIdJs}', 'films')" title="Remove">&times;</button>
             </div>
           </div>
         </div>

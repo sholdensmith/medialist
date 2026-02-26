@@ -289,7 +289,8 @@ async function loadAllData() {
     const { data, error } = await supabaseClient
       .from('medialist')
       .select('*')
-      .order('year', { ascending: false, nullsFirst: true });
+      .order('year', { ascending: false, nullsFirst: true })
+      .limit(5000);
 
     if (error) throw error;
 

@@ -286,15 +286,23 @@ function switchTab(tabName) {
 
 async function loadAllData() {
   try {
-    const { data, error } = await supabaseClient
-      .from('medialist')
-      .select('*')
-      .order('year', { ascending: false, nullsFirst: true })
-      .limit(5000);
+    // Supabase caps results at 1000 rows by default, so paginate
+    let allData = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('medialist')
+        .select('*')
+        .order('year', { ascending: false, nullsFirst: true })
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      allData = allData.concat(data || []);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
 
-    if (error) throw error;
-
-    mediaList = data || [];
+    mediaList = allData;
 
     // Extract all unique tags from books
     const tagSet = new Set();

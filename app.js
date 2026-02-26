@@ -1133,7 +1133,9 @@ function renderFilms() {
           }
           <div class="card-body">
             <div class="card-title" title="${titleText}">
-              ${titleText}
+              ${film.external_url
+                ? `<a href="${escapeHtml(film.external_url)}" target="_blank" rel="noopener">${titleText}</a>`
+                : titleText}
             </div>
             <div class="card-meta">
               <span>${creatorText}</span>

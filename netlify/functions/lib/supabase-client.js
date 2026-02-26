@@ -36,6 +36,20 @@ export async function getFilmsForSourceRefresh(limit = 20) {
   return data || [];
 }
 
+export async function getFilmsMissingImdb(limit = 50) {
+  const client = createClient();
+  const { data, error } = await client
+    .from('medialist')
+    .select('id, title, year, external_id')
+    .eq('type', 'film')
+    .is('imdb_id', null)
+    .not('external_id', 'is', null)
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function updateFilm(id, updates) {
   const client = createClient();
   const { error } = await client

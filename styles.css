@@ -539,8 +539,8 @@ header .subtitle {
 
 .media-card .card-title .book-title-link,
 .media-card .card-title .film-title-link {
-  color: inherit;
-  text-decoration: none;
+  color: white;
+  text-decoration: underline;
 }
 
 .media-card .card-title .book-title-link:hover,

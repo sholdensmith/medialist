@@ -2,23 +2,67 @@ import { getFilmsMissingImdb, updateFilm } from './lib/supabase-client.js';
 
 const BATCH_SIZE = 50;
 
+async function lookupOmdb(title, year, omdbKey) {
+  const params = new URLSearchParams({
+    apikey: omdbKey,
+    t: title,
+    type: 'movie'
+  });
+  if (year) params.set('y', year);
+
+  const response = await fetch(`https://www.omdbapi.com/?${params}`);
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  return (data.Response === 'True' && data.imdbID) ? data.imdbID : null;
+}
+
+async function lookupTmdb(title, year, tmdbToken) {
+  const params = new URLSearchParams({
+    query: title,
+    language: 'en-US',
+    page: '1'
+  });
+  if (year) params.set('primary_release_year', year);
+
+  const searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?${params}`, {
+    headers: { Authorization: `Bearer ${tmdbToken}` }
+  });
+  if (!searchRes.ok) return null;
+
+  const searchData = await searchRes.json();
+  const match = searchData.results?.[0];
+  if (!match) return null;
+
+  // Get external IDs for the matched movie
+  const extRes = await fetch(`https://api.themoviedb.org/3/movie/${match.id}/external_ids`, {
+    headers: { Authorization: `Bearer ${tmdbToken}` }
+  });
+  if (!extRes.ok) return null;
+
+  const extData = await extRes.json();
+  return extData.imdb_id || null;
+}
+
 export const handler = async (event, context) => {
   const startTime = Date.now();
   const log = {
     timestamp: new Date().toISOString(),
     toProcess: 0,
-    updated: 0,
+    updatedOmdb: 0,
+    updatedTmdb: 0,
     noImdb: 0,
     errors: []
   };
 
   try {
     const omdbKey = process.env.OMDB_API_KEY;
-    if (!omdbKey) {
-      throw new Error('Missing OMDB_API_KEY environment variable');
+    const tmdbToken = process.env.TMDB_ACCESS_TOKEN;
+    if (!omdbKey && !tmdbToken) {
+      throw new Error('Missing both OMDB_API_KEY and TMDB_ACCESS_TOKEN environment variables');
     }
 
-    console.log('Starting IMDb backfill via OMDb...');
+    console.log('Starting IMDb backfill...');
 
     const films = await getFilmsMissingImdb(BATCH_SIZE);
     log.toProcess = films.length;
@@ -33,31 +77,32 @@ export const handler = async (event, context) => {
 
     for (const film of films) {
       try {
-        const params = new URLSearchParams({
-          apikey: omdbKey,
-          t: film.title,
-          type: 'movie'
-        });
-        if (film.year) params.set('y', film.year);
+        let imdbId = null;
+        let source = null;
 
-        const response = await fetch(`https://www.omdbapi.com/?${params}`);
-
-        if (!response.ok) {
-          throw new Error(`OMDb API error: ${response.status}`);
+        // Try OMDb first
+        if (omdbKey) {
+          imdbId = await lookupOmdb(film.title, film.year, omdbKey);
+          if (imdbId) source = 'omdb';
         }
 
-        const data = await response.json();
+        // Fall back to TMDB
+        if (!imdbId && tmdbToken) {
+          imdbId = await lookupTmdb(film.title, film.year, tmdbToken);
+          if (imdbId) source = 'tmdb';
+        }
 
-        if (data.Response === 'True' && data.imdbID) {
+        if (imdbId) {
           await updateFilm(film.id, {
-            imdb_id: data.imdbID,
-            external_url: `https://www.imdb.com/title/${data.imdbID}`
+            imdb_id: imdbId,
+            external_url: `https://www.imdb.com/title/${imdbId}`
           });
-          log.updated++;
-          console.log(`+ ${film.title} (${film.year}) -> ${data.imdbID}`);
+          if (source === 'omdb') log.updatedOmdb++;
+          else log.updatedTmdb++;
+          console.log(`+ ${film.title} (${film.year}) -> ${imdbId} [${source}]`);
         } else {
           log.noImdb++;
-          console.log(`- ${film.title} (${film.year}) -> not found in OMDb`);
+          console.log(`- ${film.title} (${film.year}) -> not found`);
         }
 
       } catch (err) {
@@ -67,11 +112,12 @@ export const handler = async (event, context) => {
     }
 
     const duration = Date.now() - startTime;
-    console.log('IMDb backfill completed:', { ...log, duration: `${duration}ms` });
+    const totalUpdated = log.updatedOmdb + log.updatedTmdb;
+    console.log('IMDb backfill completed:', { ...log, totalUpdated, duration: `${duration}ms` });
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, ...log, duration })
+      body: JSON.stringify({ success: true, ...log, totalUpdated, duration })
     };
 
   } catch (error) {

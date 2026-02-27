@@ -13,12 +13,12 @@ export const handler = async (event, context) => {
   };
 
   try {
-    const watchmodeKey = process.env.WATCHMODE_API_KEY;
-    if (!watchmodeKey) {
-      throw new Error('Missing WATCHMODE_API_KEY environment variable');
+    const omdbKey = process.env.OMDB_API_KEY;
+    if (!omdbKey) {
+      throw new Error('Missing OMDB_API_KEY environment variable');
     }
 
-    console.log('Starting IMDb backfill...');
+    console.log('Starting IMDb backfill via OMDb...');
 
     const films = await getFilmsMissingImdb(BATCH_SIZE);
     log.toProcess = films.length;
@@ -33,31 +33,31 @@ export const handler = async (event, context) => {
 
     for (const film of films) {
       try {
-        const response = await fetch(
-          `https://api.watchmode.com/v1/title/${film.external_id}/?apiKey=${watchmodeKey}`
-        );
+        const params = new URLSearchParams({
+          apikey: omdbKey,
+          t: film.title,
+          type: 'movie'
+        });
+        if (film.year) params.set('y', film.year);
+
+        const response = await fetch(`https://www.omdbapi.com/?${params}`);
 
         if (!response.ok) {
-          if (response.status === 429) {
-            console.warn('Rate limited by Watchmode API, stopping batch');
-            log.errors.push({ film: film.title, error: 'Rate limited' });
-            break;
-          }
-          throw new Error(`Watchmode API error: ${response.status}`);
+          throw new Error(`OMDb API error: ${response.status}`);
         }
 
-        const details = await response.json();
+        const data = await response.json();
 
-        if (details.imdb_id) {
+        if (data.Response === 'True' && data.imdbID) {
           await updateFilm(film.id, {
-            imdb_id: details.imdb_id,
-            external_url: `https://www.imdb.com/title/${details.imdb_id}`
+            imdb_id: data.imdbID,
+            external_url: `https://www.imdb.com/title/${data.imdbID}`
           });
           log.updated++;
-          console.log(`+ ${film.title} (${film.year}) -> ${details.imdb_id}`);
+          console.log(`+ ${film.title} (${film.year}) -> ${data.imdbID}`);
         } else {
           log.noImdb++;
-          console.log(`- ${film.title} (${film.year}) -> no IMDb ID in Watchmode`);
+          console.log(`- ${film.title} (${film.year}) -> not found in OMDb`);
         }
 
       } catch (err) {

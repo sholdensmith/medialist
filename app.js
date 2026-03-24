@@ -1808,17 +1808,54 @@ function buildStreamingUrl(film, source) {
   return source?.web_url || source?.link || '';
 }
 
-async function removeMedia(id, tab) {
-  if (!confirm('Remove this item from your list?')) return;
+function removeMedia(id, tab) {
+  showConfirmDialog('Remove this item from your list?', async () => {
+    try {
+      await deleteItem(id);
+      if (tab === 'music') renderMusic();
+      else if (tab === 'films') renderFilms();
+      else if (tab === 'books') renderBooks();
+    } catch (error) {
+      showConfirmDialog('Failed to remove: ' + error.message);
+    }
+  });
+}
 
-  try {
-    await deleteItem(id);
-    if (tab === 'music') renderMusic();
-    else if (tab === 'films') renderFilms();
-    else if (tab === 'books') renderBooks();
-  } catch (error) {
-    alert('Failed to remove: ' + error.message);
-  }
+function showConfirmDialog(message, onConfirm) {
+  // Remove any existing dialog
+  const existing = document.getElementById('confirm-dialog');
+  if (existing) existing.remove();
+
+  const dialog = document.createElement('div');
+  dialog.id = 'confirm-dialog';
+  dialog.className = 'modal';
+  dialog.innerHTML = `
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-body" style="text-align: center; padding: 2rem;">
+        <p style="margin-bottom: 1.5rem; font-size: 1.1rem;">${message}</p>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+          ${onConfirm ? `
+            <button class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+            <button class="btn" id="confirm-ok">Remove</button>
+          ` : `
+            <button class="btn" id="confirm-ok">OK</button>
+          `}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(dialog);
+
+  dialog.addEventListener('click', e => {
+    if (e.target === dialog || e.target.id === 'confirm-cancel') {
+      dialog.remove();
+    }
+  });
+
+  document.getElementById('confirm-ok').addEventListener('click', () => {
+    dialog.remove();
+    if (onConfirm) onConfirm();
+  });
 }
 
 // ============================================================================

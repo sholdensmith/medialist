@@ -634,6 +634,23 @@ a.streaming-badge:hover {
   color: white;
 }
 
+.media-type-badge {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-right: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tv-badge {
+  background: #6366f1;
+  color: white;
+}
+
 /* Currently Reading Section */
 .currently-reading {
   background: var(--bg-secondary);

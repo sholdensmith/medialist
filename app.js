@@ -56,6 +56,7 @@ const elements = {
   filmsList: document.getElementById('films-list'),
   filmsEmpty: document.getElementById('films-empty'),
   filmsFilter: document.getElementById('films-filter'),
+  filmsTypeFilter: document.getElementById('films-type-filter'),
   filmsServiceFilter: document.getElementById('films-service-filter'),
   filmsStreamableFilter: document.getElementById('films-streamable-filter'),
   filmsLibraryFilter: document.getElementById('films-library-filter'),
@@ -210,6 +211,7 @@ function setupEventListeners() {
       ? 'Search by director name...'
       : 'Search for films...';
   });
+  elements.filmsTypeFilter.addEventListener('change', renderFilms);
   elements.filmsServiceFilter.addEventListener('change', renderFilms);
   elements.filmsStreamableFilter.addEventListener('change', renderFilms);
   elements.filmsLibraryFilter.addEventListener('change', renderFilms);
@@ -883,6 +885,7 @@ async function addFilmFromTmdb(tmdbId, title, year, posterUrl, directorName) {
     const film = {
       id: filmId,
       type: 'film',
+      media_type: 'movie',
       title: title,
       creator: omdbData.Director || directorName || '',
       year: year,
@@ -929,7 +932,7 @@ function displayFilmSearchResults(films) {
         <div class="search-result-item">
           <img src="${film.image_url || ''}" alt="${film.name}" onerror="this.style.display='none'">
           <div class="info">
-            <div class="title">${film.name}</div>
+            <div class="title">${film.type === 'tv_series' || film.type === 'tv_miniseries' || film.type === 'tv_special' ? '<span class="media-type-badge tv-badge">TV</span>' : ''}${film.name}</div>
             <div class="meta">${film.year || ''}</div>
           </div>
           <div class="actions">
@@ -1003,9 +1006,13 @@ async function addFilm(watchmodeId, fallbackTitle = '', fallbackYear = null, fal
       ? sources.filter(s => s.type === 'sub' || s.type === 'free')
       : [];
 
+    const wmType = (details.type || '').toLowerCase();
+    const media_type = (wmType.includes('tv_series') || wmType.includes('tv_miniseries') || wmType === 'tv_special') ? 'tv' : 'movie';
+
     const film = {
       id: `watchmode:film:${watchmodeId}`,
       type: 'film',
+      media_type,
       title,
       creator: omdbData.Director || details.director || '',
       year,
@@ -1043,6 +1050,12 @@ function renderFilms() {
       (f.creator || '').toLowerCase().includes(filterQuery) ||
       (f.director || '').toLowerCase().includes(filterQuery)
     );
+  }
+
+  // Apply type filter
+  const typeFilter = elements.filmsTypeFilter.value;
+  if (typeFilter) {
+    films = films.filter(f => (f.media_type || 'movie') === typeFilter);
   }
 
   // Apply filters
@@ -1133,7 +1146,7 @@ function renderFilms() {
           }
           <div class="card-body">
             <div class="card-title" title="${titleText}">
-              ${film.external_url
+              ${film.media_type === 'tv' ? '<span class="media-type-badge tv-badge">TV</span>' : ''}${film.external_url
                 ? `<a href="${escapeHtml(film.external_url)}" target="_blank" rel="noopener" class="film-title-link">${titleText}</a>`
                 : titleText}
             </div>
@@ -1172,17 +1185,33 @@ async function refreshFilmSources(filmId) {
   }
 
   try {
-    const response = await fetch(
-      `https://api.watchmode.com/v1/title/${film.external_id}/sources/?apiKey=${watchmodeKey}&regions=US`
-    );
+    const fetches = [
+      fetch(`https://api.watchmode.com/v1/title/${film.external_id}/sources/?apiKey=${watchmodeKey}&regions=US`)
+    ];
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    // If media_type is missing, also fetch title details to backfill it
+    if (!film.media_type) {
+      fetches.push(fetch(`https://api.watchmode.com/v1/title/${film.external_id}/?apiKey=${watchmodeKey}`));
+    }
 
-    const sources = await response.json();
+    const [sourcesRes, detailsRes] = await Promise.all(fetches);
+
+    if (!sourcesRes.ok) throw new Error(`API error: ${sourcesRes.status}`);
+
+    const sources = await sourcesRes.json();
     film.streaming_sources = Array.isArray(sources)
       ? sources.filter(s => s.type === 'sub' || s.type === 'free')
       : [];
     film.sources_last_synced = new Date().toISOString();
+
+    // Backfill media_type from title details
+    if (detailsRes && detailsRes.ok) {
+      try {
+        const details = await detailsRes.json();
+        const wmType = (details.type || '').toLowerCase();
+        film.media_type = (wmType.includes('tv_series') || wmType.includes('tv_miniseries') || wmType === 'tv_special') ? 'tv' : 'movie';
+      } catch (e) { /* ignore parse errors */ }
+    }
 
     await saveItem(film);
     renderFilms();
@@ -2041,6 +2070,7 @@ function convertFilmWatchlistFormat(watchlist) {
   return watchlist.map(film => ({
     id: `watchmode:film:${film.id}`,
     type: 'film',
+    media_type: film.media_type || 'movie',
     title: film.title,
     creator: film.director || '',
     year: film.year,

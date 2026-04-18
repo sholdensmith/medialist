@@ -78,6 +78,38 @@ const elements = {
   booksFilter: document.getElementById('books-filter'),
 };
 
+const PERSISTED_FILTER_IDS = [
+  'music-sort', 'music-filter',
+  'films-search-mode', 'films-filter', 'films-type-filter', 'films-service-filter',
+  'films-streamable-filter', 'films-library-filter', 'films-unavailable-filter', 'films-sort',
+  'books-status-filter', 'books-type-filter', 'books-tag-filter', 'books-sort', 'books-filter',
+];
+
+function restoreFilter(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const saved = localStorage.getItem(`filter_${id}`);
+  if (saved === null) return;
+  if (el.type === 'checkbox') el.checked = saved === 'true';
+  else el.value = saved;
+}
+
+function restoreAllFilters() {
+  PERSISTED_FILTER_IDS.forEach(restoreFilter);
+}
+
+function setupFilterPersistence() {
+  PERSISTED_FILTER_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const event = (el.tagName === 'INPUT' && el.type === 'text') ? 'input' : 'change';
+    el.addEventListener(event, () => {
+      const value = el.type === 'checkbox' ? String(el.checked) : el.value;
+      localStorage.setItem(`filter_${id}`, value);
+    });
+  });
+}
+
 // ============================================================================
 // Initialization
 // ============================================================================
@@ -158,7 +190,11 @@ function showMainApp() {
   elements.mainApp.classList.remove('hidden');
 
   setupEventListeners();
+  restoreAllFilters();
   renderAll();
+  // Book tag options are populated by renderAll; re-restore now that they exist.
+  restoreFilter('books-tag-filter');
+  renderBooks();
 
   const savedTab = localStorage.getItem('active_tab');
   if (savedTab) switchTab(savedTab);
@@ -170,6 +206,8 @@ function showMainApp() {
 }
 
 function setupEventListeners() {
+  setupFilterPersistence();
+
   // Tab switching
   elements.tabs.forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -613,6 +651,8 @@ async function loadStreamingServices() {
     if (response.ok) {
       availableServices = await response.json();
       populateServiceFilter();
+      restoreFilter('films-service-filter');
+      renderFilms();
     }
   } catch (error) {
     console.error('Failed to load streaming services:', error);

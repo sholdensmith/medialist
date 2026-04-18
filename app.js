@@ -159,6 +159,14 @@ function showMainApp() {
 
   setupEventListeners();
   renderAll();
+
+  const savedTab = localStorage.getItem('active_tab');
+  if (savedTab) switchTab(savedTab);
+
+  const savedScroll = Number(localStorage.getItem('scroll_y')) || 0;
+  if (savedScroll > 0) {
+    requestAnimationFrame(() => window.scrollTo(0, savedScroll));
+  }
 }
 
 function setupEventListeners() {
@@ -260,11 +268,19 @@ function setupEventListeners() {
 
   // Back to top button
   const backToTopBtn = document.getElementById('back-to-top');
+  let scrollSavePending = false;
   window.addEventListener('scroll', () => {
     if (window.scrollY > 300) {
       backToTopBtn.classList.remove('hidden');
     } else {
       backToTopBtn.classList.add('hidden');
+    }
+    if (!scrollSavePending) {
+      scrollSavePending = true;
+      requestAnimationFrame(() => {
+        localStorage.setItem('scroll_y', String(window.scrollY));
+        scrollSavePending = false;
+      });
     }
   });
   backToTopBtn.addEventListener('click', () => {
@@ -273,6 +289,7 @@ function setupEventListeners() {
 }
 
 function switchTab(tabName) {
+  localStorage.setItem('active_tab', tabName);
   elements.tabs.forEach(tab => {
     tab.classList.toggle('active', tab.dataset.tab === tabName);
   });

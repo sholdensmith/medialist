@@ -642,7 +642,7 @@ async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl, ar
 async function backfillAlbumGenres() {
   const btn = document.getElementById('backfill-genres-btn');
   const status = document.getElementById('backfill-genres-status');
-  const albums = mediaList.filter(m => m.type === 'album' && !Array.isArray(m.genres));
+  const albums = mediaList.filter(m => m.type === 'album' && (!Array.isArray(m.genres) || m.genres.length === 0));
   if (albums.length === 0) {
     status.textContent = 'All albums already have genres.';
     return;

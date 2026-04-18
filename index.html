@@ -71,6 +71,9 @@
       </div>
       <div class="filter-row">
         <input type="text" id="music-filter" class="list-filter" placeholder="Filter list...">
+        <select id="music-genre-filter">
+          <option value="">All Genres</option>
+        </select>
         <label class="sort-label">
           Sort by:
           <select id="music-sort">
@@ -234,6 +237,12 @@
         <div class="settings-section">
           <h3>Book Tags</h3>
           <div id="book-tags-list" class="tags-list"></div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Music Genres</h3>
+          <button id="backfill-genres-btn" class="btn">Fetch genres for existing albums</button>
+          <span id="backfill-genres-status" style="margin-left: 0.75rem; color: var(--text-secondary);"></span>
         </div>
 
         <div class="settings-section">

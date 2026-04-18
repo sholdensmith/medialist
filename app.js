@@ -46,6 +46,7 @@ const elements = {
   musicEmpty: document.getElementById('music-empty'),
   musicSort: document.getElementById('music-sort'),
   musicFilter: document.getElementById('music-filter'),
+  musicGenreFilter: document.getElementById('music-genre-filter'),
 
   // Films
   filmsSearch: document.getElementById('films-search'),
@@ -79,11 +80,40 @@ const elements = {
 };
 
 const PERSISTED_FILTER_IDS = [
-  'music-sort', 'music-filter',
+  'music-sort', 'music-filter', 'music-genre-filter',
   'films-search-mode', 'films-filter', 'films-type-filter', 'films-service-filter',
   'films-streamable-filter', 'films-library-filter', 'films-unavailable-filter', 'films-sort',
   'books-status-filter', 'books-type-filter', 'books-tag-filter', 'books-sort', 'books-filter',
 ];
+
+// First match wins. "Pop" is last as a catch-all.
+const GENRE_BUCKETS = [
+  { name: 'Hip-Hop', match: ['hip hop', 'rap', 'trap', 'drill', 'grime'] },
+  { name: 'Metal', match: ['metal', 'doom', 'sludge', 'grindcore'] },
+  { name: 'Rock', match: ['rock', 'punk', 'hardcore', 'emo', 'grunge', 'shoegaze'] },
+  { name: 'Ambient', match: ['ambient', 'drone', 'new age'] },
+  { name: 'Electronic', match: ['electronic', 'techno', 'house', 'edm', 'dubstep', 'drum and bass', 'idm', 'synthwave', 'trance', 'breakbeat'] },
+  { name: 'R&B/Soul', match: ['r&b', 'soul', 'funk', 'motown'] },
+  { name: 'Jazz', match: ['jazz', 'bossa nova', 'swing', 'bebop'] },
+  { name: 'Classical', match: ['classical', 'baroque', 'opera', 'chamber', 'orchestra', 'symphony'] },
+  { name: 'Blues', match: ['blues'] },
+  { name: 'Folk', match: ['folk', 'americana', 'bluegrass', 'singer-songwriter'] },
+  { name: 'Country', match: ['country', 'honky tonk'] },
+  { name: 'Reggae', match: ['reggae', 'dub', 'dancehall', 'ska'] },
+  { name: 'Latin', match: ['latin', 'reggaeton', 'salsa', 'cumbia'] },
+  { name: 'World', match: ['afrobeats', 'k-pop', 'j-pop', 'bollywood', 'arabic', 'mandopop'] },
+  { name: 'Pop', match: ['pop'] },
+];
+
+function bucketsForGenres(genres) {
+  const result = new Set();
+  (genres || []).forEach(g => {
+    const lower = g.toLowerCase();
+    const hit = GENRE_BUCKETS.find(b => b.match.some(m => lower.includes(m)));
+    if (hit) result.add(hit.name);
+  });
+  return result;
+}
 
 function restoreFilter(id) {
   const el = document.getElementById(id);
@@ -192,9 +222,11 @@ function showMainApp() {
   setupEventListeners();
   restoreAllFilters();
   renderAll();
-  // Book tag options are populated by renderAll; re-restore now that they exist.
+  // Dynamic filter options are populated by renderAll; re-restore now that they exist.
   restoreFilter('books-tag-filter');
   renderBooks();
+  restoreFilter('music-genre-filter');
+  renderMusic();
 
   const savedTab = localStorage.getItem('active_tab');
   if (savedTab) switchTab(savedTab);
@@ -237,6 +269,7 @@ function setupEventListeners() {
   });
   elements.musicSort.addEventListener('change', renderMusic);
   elements.musicFilter.addEventListener('input', debounce(renderMusic, 150));
+  elements.musicGenreFilter.addEventListener('change', renderMusic);
 
   // Films
   elements.filmsSearchBtn.addEventListener('click', searchFilms);
@@ -303,6 +336,7 @@ function setupEventListeners() {
   document.getElementById('settings-save-keys').addEventListener('click', saveSettings);
   document.getElementById('export-data-btn').addEventListener('click', exportData);
   document.getElementById('import-data-input').addEventListener('change', importData);
+  document.getElementById('backfill-genres-btn').addEventListener('click', backfillAlbumGenres);
 
   // Back to top button
   const backToTopBtn = document.getElementById('back-to-top');
@@ -496,6 +530,26 @@ async function getSpotifyToken() {
   return spotifyToken;
 }
 
+async function spotifyFetch(path) {
+  const token = await getSpotifyToken();
+  const response = await fetch(`https://api.spotify.com/v1${path}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) throw new Error(`Spotify ${path} ${response.status}`);
+  return response.json();
+}
+
+async function fetchArtistGenres(artistId) {
+  if (!artistId) return [];
+  try {
+    const data = await spotifyFetch(`/artists/${encodeURIComponent(artistId)}`);
+    return data.genres || [];
+  } catch (error) {
+    console.error('Failed to fetch artist genres:', error);
+    return [];
+  }
+}
+
 async function searchMusic() {
   const query = elements.musicSearch.value.trim();
   if (!query) return;
@@ -548,7 +602,7 @@ function displayMusicSearchResults(albums) {
           <div class="actions">
             ${isAdded
               ? `<span class="added-indicator" onclick="scrollToItem('spotify:album:${escapeJs(album.id)}')" title="Jump to item">Added</span>`
-              : `<button class="btn btn-small btn-success" onclick="addAlbum('${escapeJs(album.id)}', '${escapeJs(album.name)}', '${escapeJs(album.artists[0]?.name || 'Unknown')}', ${year}, '${escapeJs(coverUrl)}', '${escapeJs(album.external_urls.spotify)}')">Add</button>`
+              : `<button class="btn btn-small btn-success" onclick="addAlbum('${escapeJs(album.id)}', '${escapeJs(album.name)}', '${escapeJs(album.artists[0]?.name || 'Unknown')}', ${year}, '${escapeJs(coverUrl)}', '${escapeJs(album.external_urls.spotify)}', '${escapeJs(album.artists[0]?.id || '')}')">Add</button>`
             }
             <a href="${escapeHtml(spotifyAppUrl)}" target="_blank" class="btn btn-small btn-secondary" onclick="return openSpotifyLink('${album.id}', '${escapeHtml(spotifyWebUrl)}')">Spotify</a>
           </div>
@@ -558,7 +612,8 @@ function displayMusicSearchResults(albums) {
   `;
 }
 
-async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
+async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl, artistId) {
+  const genres = await fetchArtistGenres(artistId);
   const album = {
     id: `spotify:album:${spotifyId}`,
     type: 'album',
@@ -570,6 +625,7 @@ async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
     external_id: spotifyId,
     spotify_id: spotifyId,
     spotify_url: spotifyUrl,
+    genres,
     date_added: new Date().toISOString()
   };
 
@@ -583,8 +639,80 @@ async function addAlbum(spotifyId, title, artist, year, coverUrl, spotifyUrl) {
   }
 }
 
+async function backfillAlbumGenres() {
+  const btn = document.getElementById('backfill-genres-btn');
+  const status = document.getElementById('backfill-genres-status');
+  const albums = mediaList.filter(m => m.type === 'album' && !Array.isArray(m.genres));
+  if (albums.length === 0) {
+    status.textContent = 'All albums already have genres.';
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = `Fetching album details for ${albums.length} albums...`;
+
+  try {
+    const artistByAlbum = new Map();
+    for (let i = 0; i < albums.length; i += 20) {
+      const batch = albums.slice(i, i + 20).map(a => a.spotify_id).filter(Boolean);
+      if (batch.length === 0) continue;
+      const data = await spotifyFetch(`/albums?ids=${batch.join(',')}`);
+      (data.albums || []).forEach(a => {
+        const primary = a?.artists?.[0]?.id;
+        if (a && primary) artistByAlbum.set(a.id, primary);
+      });
+      status.textContent = `Fetched albums ${Math.min(i + 20, albums.length)}/${albums.length}`;
+    }
+
+    const uniqueArtists = [...new Set(artistByAlbum.values())];
+    status.textContent = `Fetching genres for ${uniqueArtists.length} artists...`;
+
+    const genresByArtist = new Map();
+    for (let i = 0; i < uniqueArtists.length; i += 50) {
+      const batch = uniqueArtists.slice(i, i + 50);
+      const data = await spotifyFetch(`/artists?ids=${batch.join(',')}`);
+      (data.artists || []).forEach(a => {
+        if (a) genresByArtist.set(a.id, a.genres || []);
+      });
+    }
+
+    let saved = 0;
+    for (const album of albums) {
+      const artistId = artistByAlbum.get(album.spotify_id);
+      album.genres = artistId ? (genresByArtist.get(artistId) || []) : [];
+      await saveItem(album);
+      saved++;
+      if (saved % 10 === 0 || saved === albums.length) {
+        status.textContent = `Saved ${saved}/${albums.length}`;
+      }
+    }
+
+    status.textContent = `Done. Updated ${albums.length} albums.`;
+    renderMusic();
+  } catch (error) {
+    console.error('Backfill failed:', error);
+    status.textContent = `Error: ${error.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function populateMusicGenreFilter(albums) {
+  const select = elements.musicGenreFilter;
+  if (!select) return;
+  const present = new Set();
+  albums.forEach(a => bucketsForGenres(a.genres).forEach(b => present.add(b)));
+  const ordered = GENRE_BUCKETS.map(b => b.name).filter(n => present.has(n));
+  const current = select.value;
+  select.innerHTML = '<option value="">All Genres</option>' +
+    ordered.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  if (ordered.includes(current)) select.value = current;
+}
+
 function renderMusic() {
   let albums = mediaList.filter(m => m.type === 'album');
+
+  populateMusicGenreFilter(albums);
 
   const filterQuery = (elements.musicFilter?.value || '').trim().toLowerCase();
   if (filterQuery) {
@@ -592,6 +720,11 @@ function renderMusic() {
       a.title.toLowerCase().includes(filterQuery) ||
       (a.creator || '').toLowerCase().includes(filterQuery)
     );
+  }
+
+  const genreBucket = elements.musicGenreFilter?.value || '';
+  if (genreBucket) {
+    albums = albums.filter(a => bucketsForGenres(a.genres).has(genreBucket));
   }
 
   if (albums.length === 0) {

@@ -122,11 +122,15 @@
         <label class="checkbox-label">
           <input type="checkbox" id="films-unavailable-filter"> Not Available
         </label>
+        <select id="films-ranking-filter">
+          <option value="">All Lists</option>
+        </select>
         <label class="sort-label">
           Sort by:
           <select id="films-sort">
             <option value="year">Year</option>
             <option value="title">Title</option>
+            <option value="rank">Rank</option>
           </select>
         </label>
       </div>
@@ -243,6 +247,30 @@
           <h3>Music Genres</h3>
           <button id="backfill-genres-btn" class="btn">Fetch genres for existing albums</button>
           <span id="backfill-genres-status" style="margin-left: 0.75rem; color: var(--text-secondary);"></span>
+        </div>
+
+        <div class="settings-section">
+          <h3>Film Ranking Lists</h3>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            Import a spreadsheet (CSV) of a ranked list or an unranked best-of list.
+            A header row is recommended (e.g. <code>rank,title,year</code> or <code>title,year</code>);
+            an <code>imdb_id</code> column makes matching exact. Films on your watchlist that
+            appear on an imported list get a badge.
+          </p>
+          <div id="ranking-lists-list" class="tags-list" style="margin-bottom: 1rem;"></div>
+          <label>
+            List Name
+            <input type="text" id="ranking-list-name" placeholder="e.g. NYT Best Movies of the 21st Century">
+          </label>
+          <label>
+            Badge Label
+            <input type="text" id="ranking-list-label" placeholder="e.g. NYT" maxlength="20">
+          </label>
+          <label class="file-input-label" style="margin-left: 0;">
+            Import Ranking CSV
+            <input type="file" id="ranking-csv-input" accept=".csv,.tsv,.txt">
+          </label>
+          <span id="ranking-import-status" style="margin-left: 0.75rem; color: var(--text-secondary);"></span>
         </div>
 
         <div class="settings-section">

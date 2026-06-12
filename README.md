@@ -5,7 +5,7 @@ A unified media tracking app for albums, films, and books.
 ## Features
 
 - **Music**: Search Spotify, track albums by release year
-- **Films**: Search Watchmode, track streaming availability, mark as "In Library"
+- **Films**: Search Watchmode, track streaming availability, mark as "In Library", import best-of/ranking lists from CSV to badge films (e.g. "TSPDT #934")
 - **Books**: Search Open Library + Google Books, track reading status, add tags/notes
 
 ## Setup

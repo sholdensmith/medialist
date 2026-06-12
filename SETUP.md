@@ -71,10 +71,33 @@ CREATE POLICY "Allow all access" ON medialist
   FOR ALL
   USING (true)
   WITH CHECK (true);
+
+-- Film ranking lists (imported best-of / top-N lists, e.g. "TSPDT" or "NYT Best of 2025")
+CREATE TABLE film_rankings (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  list_name TEXT NOT NULL,
+  short_label TEXT NOT NULL,
+  rank INTEGER,           -- NULL for unranked lists
+  title TEXT NOT NULL,
+  year INTEGER,
+  imdb_id TEXT,
+  date_added TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_film_rankings_list ON film_rankings(list_name);
+
+ALTER TABLE film_rankings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all access" ON film_rankings
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 ```
 
 4. Click **Run** (or press Cmd+Enter)
 5. You should see "Success. No rows returned" - this is correct!
+
+> **Upgrading an existing install?** Run just the `film_rankings` portion of the SQL above (everything from `CREATE TABLE film_rankings` down) in the SQL Editor to enable film ranking lists.
 
 ## 3. Get Your Credentials
 
@@ -120,6 +143,40 @@ Or run the migration script:
 ```bash
 node migrate.js
 ```
+
+## 7. Film Ranking Lists (Optional)
+
+You can import best-of / top-N film lists as CSV spreadsheets. Films on your
+watchlist that appear on an imported list show a badge (e.g. "TSPDT #934" or
+"NYT 2025"), and you can filter the films tab to a single list and sort by rank.
+
+1. Go to **Settings → Film Ranking Lists**
+2. Enter a **List Name** (shown in the filter dropdown) and a short **Badge Label**
+3. Click **Import Ranking CSV** and pick your file
+
+CSV format:
+- A header row is recommended: `rank,title,year` for ranked lists, or
+  `title,year` for unranked lists. Without a header, columns are auto-detected.
+- An `imdb_id` column (e.g. `tt0033467`) makes matching exact; otherwise films
+  are matched by title and year (±1 year tolerance).
+- Comma, tab, and semicolon delimiters are supported.
+
+Example (ranked):
+```csv
+rank,title,year
+1,Citizen Kane,1941
+2,Vertigo,1958
+```
+
+Example (unranked best-of list):
+```csv
+title,year
+Anora,2024
+The Brutalist,2024
+```
+
+Importing a list does **not** add films to your watchlist — it only badges
+the ones already there (and any you add later).
 
 ---
 

@@ -8,6 +8,9 @@
 let supabaseClient = null;
 let mediaList = [];
 let allTags = [];
+let filmRankings = [];
+let rankingIndexByImdb = new Map();
+let rankingIndexByTitle = new Map();
 let availableServices = [];
 let selectedServices = [];
 let spotifyToken = null;
@@ -62,6 +65,7 @@ const elements = {
   filmsStreamableFilter: document.getElementById('films-streamable-filter'),
   filmsLibraryFilter: document.getElementById('films-library-filter'),
   filmsUnavailableFilter: document.getElementById('films-unavailable-filter'),
+  filmsRankingFilter: document.getElementById('films-ranking-filter'),
   filmsSort: document.getElementById('films-sort'),
 
   // Books
@@ -82,7 +86,8 @@ const elements = {
 const PERSISTED_FILTER_IDS = [
   'music-sort', 'music-filter', 'music-genre-filter',
   'films-search-mode', 'films-filter', 'films-type-filter', 'films-service-filter',
-  'films-streamable-filter', 'films-library-filter', 'films-unavailable-filter', 'films-sort',
+  'films-streamable-filter', 'films-library-filter', 'films-unavailable-filter',
+  'films-ranking-filter', 'films-sort',
   'books-status-filter', 'books-type-filter', 'books-tag-filter', 'books-sort', 'books-filter',
 ];
 
@@ -227,6 +232,8 @@ function showMainApp() {
   renderBooks();
   restoreFilter('music-genre-filter');
   renderMusic();
+  restoreFilter('films-ranking-filter');
+  renderFilms();
 
   const savedTab = localStorage.getItem('active_tab');
   if (savedTab) switchTab(savedTab);
@@ -295,6 +302,7 @@ function setupEventListeners() {
   elements.filmsStreamableFilter.addEventListener('change', renderFilms);
   elements.filmsLibraryFilter.addEventListener('change', renderFilms);
   elements.filmsUnavailableFilter.addEventListener('change', renderFilms);
+  elements.filmsRankingFilter.addEventListener('change', renderFilms);
   elements.filmsSort.addEventListener('change', renderFilms);
   elements.filmsFilter.addEventListener('input', debounce(renderFilms, 150));
 
@@ -336,6 +344,7 @@ function setupEventListeners() {
   document.getElementById('settings-save-keys').addEventListener('click', saveSettings);
   document.getElementById('export-data-btn').addEventListener('click', exportData);
   document.getElementById('import-data-input').addEventListener('change', importData);
+  document.getElementById('ranking-csv-input').addEventListener('change', importRankingCsv);
   document.getElementById('backfill-genres-btn').addEventListener('click', backfillAlbumGenres);
 
   // Back to top button
@@ -409,6 +418,33 @@ async function loadAllData() {
     console.error('Error loading data:', error);
     mediaList = [];
   }
+
+  await loadFilmRankings();
+}
+
+async function loadFilmRankings() {
+  try {
+    let allRankings = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('film_rankings')
+        .select('*')
+        .order('id')
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      allRankings = allRankings.concat(data || []);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+    filmRankings = allRankings;
+  } catch (error) {
+    // Table may not exist yet; rankings are optional (see SETUP.md)
+    console.warn('Film rankings unavailable:', error.message);
+    filmRankings = [];
+  }
+  buildRankingIndex();
 }
 
 async function saveItem(item) {
@@ -478,6 +514,9 @@ function populateFilters() {
 
   // Populate film service filter
   loadStreamingServices();
+
+  // Populate film ranking list filter
+  populateRankingFilter();
 }
 
 // ============================================================================
@@ -1287,6 +1326,18 @@ function renderFilms() {
     });
   }
 
+  // Apply ranking list filter
+  const rankingFilter = elements.filmsRankingFilter?.value || '';
+  const rankByFilmId = new Map();
+  if (rankingFilter) {
+    films = films.filter(f => {
+      const entry = getFilmRankings(f).find(r => r.list_name === rankingFilter);
+      if (!entry) return false;
+      rankByFilmId.set(f.id, entry.rank);
+      return true;
+    });
+  }
+
   if (films.length === 0) {
     elements.filmsList.innerHTML = '';
     elements.filmsEmpty.classList.remove('hidden');
@@ -1297,9 +1348,23 @@ function renderFilms() {
 
   // Group by selected sort method
   const sortBy = elements.filmsSort.value;
-  const grouped = sortBy === 'title'
-    ? groupByTitle(films)
-    : groupByYear(films);
+  let grouped;
+  if (sortBy === 'rank' && rankingFilter) {
+    // Rank sort only makes sense within a single list; unranked entries go last
+    const items = [...films].sort((a, b) => {
+      const rankA = rankByFilmId.get(a.id);
+      const rankB = rankByFilmId.get(b.id);
+      if (rankA == null && rankB == null) return compareByTitle(a, b);
+      if (rankA == null) return 1;
+      if (rankB == null) return -1;
+      return rankA - rankB;
+    });
+    grouped = [{ year: rankingFilter, items }];
+  } else {
+    grouped = sortBy === 'title'
+      ? groupByTitle(films)
+      : groupByYear(films);
+  }
 
   elements.filmsList.innerHTML = grouped.map(({ year, items }) => `
     <div class="year-header">${year || 'Unknown Year'}</div>
@@ -1324,6 +1389,11 @@ function renderFilms() {
         return `<span class="streaming-badge">${formatServiceName(s.name)}</span>`;
       }).join('');
 
+      const rankingBadges = getFilmRankings(film).map(r => {
+        const badgeText = `${r.short_label}${r.rank != null ? ` #${r.rank}` : ''}`;
+        return `<span class="ranking-badge" title="${escapeHtml(r.list_name)}${r.rank != null ? ` — #${r.rank}` : ''}">${escapeHtml(badgeText)}</span>`;
+      }).join('');
+
       const titleText = escapeHtml(film.title);
       const creatorText = escapeHtml(film.creator || film.director || '');
       const filmIdJs = escapeJs(film.id);
@@ -1345,6 +1415,7 @@ function renderFilms() {
               ${film.year ? `<span>${film.year}</span>` : ''}
               ${film.runtime ? `<span>${formatRuntime(film.runtime)}</span>` : ''}
             </div>
+            ${rankingBadges ? `<div class="ranking-badges">${rankingBadges}</div>` : ''}
             ${streamingBadges ? `<div class="streaming-badges">${streamingBadges}</div>` : ''}
             <div class="card-actions">
               <button class="btn btn-small ${film.in_library ? 'btn-success' : 'btn-secondary'}" onclick="toggleFilmLibrary('${filmIdJs}')">${film.in_library ? 'In Library' : 'Add to Library'}</button>
@@ -1422,6 +1493,296 @@ async function toggleFilmLibrary(id) {
   film.in_library = !film.in_library;
   await saveItem(film);
   renderFilms();
+}
+
+// ============================================================================
+// Film Rankings Module
+// ============================================================================
+
+function buildRankingIndex() {
+  rankingIndexByImdb = new Map();
+  rankingIndexByTitle = new Map();
+  filmRankings.forEach(entry => {
+    if (entry.imdb_id) {
+      const key = entry.imdb_id.trim().toLowerCase();
+      if (!rankingIndexByImdb.has(key)) rankingIndexByImdb.set(key, []);
+      rankingIndexByImdb.get(key).push(entry);
+    }
+    const titleKey = normalizeTitle(entry.title);
+    if (titleKey) {
+      if (!rankingIndexByTitle.has(titleKey)) rankingIndexByTitle.set(titleKey, []);
+      rankingIndexByTitle.get(titleKey).push(entry);
+    }
+  });
+}
+
+// Sources often disagree by a year on release dates, so allow ±1
+function rankingYearsCompatible(a, b) {
+  if (!a || !b) return true;
+  return Math.abs(a - b) <= 1;
+}
+
+// Returns at most one ranking entry per list for a film. IMDb ID matches win;
+// otherwise fall back to normalized title + year.
+function getFilmRankings(film) {
+  if (filmRankings.length === 0) return [];
+
+  const byList = new Map();
+  const consider = entry => {
+    if (!byList.has(entry.list_name)) byList.set(entry.list_name, entry);
+  };
+
+  const filmImdb = (film.imdb_id || '').trim().toLowerCase();
+  if (filmImdb) {
+    (rankingIndexByImdb.get(filmImdb) || []).forEach(consider);
+  }
+
+  (rankingIndexByTitle.get(normalizeTitle(film.title)) || [])
+    .filter(e => !(e.imdb_id && filmImdb && e.imdb_id.toLowerCase() !== filmImdb))
+    .filter(e => rankingYearsCompatible(e.year, film.year))
+    .forEach(consider);
+
+  return Array.from(byList.values()).sort((a, b) => a.short_label.localeCompare(b.short_label));
+}
+
+function countRankingMatches(listName) {
+  return mediaList.filter(m =>
+    m.type === 'film' && getFilmRankings(m).some(r => r.list_name === listName)
+  ).length;
+}
+
+function populateRankingFilter() {
+  const filter = elements.filmsRankingFilter;
+  if (!filter) return;
+
+  const current = filter.value;
+  const names = [...new Set(filmRankings.map(r => r.list_name))].sort();
+  filter.innerHTML = '<option value="">All Lists</option>' +
+    names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  if (names.includes(current)) filter.value = current;
+}
+
+// Parses CSV/TSV text into rows of fields, handling quoted fields
+function parseDelimitedRows(text) {
+  const newlineIndex = text.indexOf('\n');
+  const firstLine = newlineIndex >= 0 ? text.slice(0, newlineIndex) : text;
+  const delimiter = [',', '\t', ';'].reduce((best, d) =>
+    firstLine.split(d).length > firstLine.split(best).length ? d : best);
+
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        field += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === delimiter) {
+      row.push(field);
+      field = '';
+    } else if (char === '\n' || char === '\r') {
+      if (char === '\r' && text[i + 1] === '\n') i++;
+      row.push(field);
+      if (row.some(f => f.trim() !== '')) rows.push(row);
+      row = [];
+      field = '';
+    } else {
+      field += char;
+    }
+  }
+  row.push(field);
+  if (row.some(f => f.trim() !== '')) rows.push(row);
+
+  return rows;
+}
+
+// Figures out which column is which, with or without a header row
+function mapRankingColumns(rows) {
+  const header = rows[0].map(c => c.trim().toLowerCase());
+  const findCol = names => header.findIndex(h => names.some(n => h === n || h.includes(n)));
+
+  const headerTitle = findCol(['title', 'film', 'movie', 'name']);
+  if (headerTitle >= 0) {
+    return {
+      hasHeader: true,
+      title: headerTitle,
+      rank: findCol(['rank', 'position', 'pos', 'no.', '#']),
+      year: findCol(['year', 'release']),
+      imdb: findCol(['imdb'])
+    };
+  }
+
+  // No header: classify columns by sampling values
+  const sample = rows.slice(0, 25);
+  const colCount = rows[0].length;
+  const stats = [];
+  for (let c = 0; c < colCount; c++) {
+    let imdb = 0, ints = 0, yearish = 0, filled = 0;
+    sample.forEach(r => {
+      const v = (r[c] || '').trim();
+      if (!v) return;
+      filled++;
+      if (/^tt\d{5,}$/i.test(v)) imdb++;
+      if (/^#?\d+\.?$/.test(v)) {
+        ints++;
+        const n = parseInt(v.replace(/\D/g, ''), 10);
+        if (n >= 1880 && n <= 2100) yearish++;
+      }
+    });
+    stats.push({
+      imdb: filled > 0 && imdb / filled > 0.8,
+      int: filled > 0 && ints / filled > 0.8,
+      yearish: filled > 0 && yearish / filled > 0.8
+    });
+  }
+
+  const intCols = stats.map((s, c) => (s.int && !s.imdb ? c : -1)).filter(c => c >= 0);
+  const year = intCols.find(c => stats[c].yearish);
+  const rank = intCols.find(c => c !== year);
+  return {
+    hasHeader: false,
+    title: stats.findIndex(s => !s.int && !s.imdb),
+    rank: rank === undefined ? -1 : rank,
+    year: year === undefined ? -1 : year,
+    imdb: stats.findIndex(s => s.imdb)
+  };
+}
+
+function parseRankingCsv(text) {
+  const rows = parseDelimitedRows(text);
+  if (rows.length === 0) return [];
+
+  const cols = mapRankingColumns(rows);
+  if (cols.title < 0) {
+    throw new Error('Could not find a title column. Add a header row like "rank,title,year".');
+  }
+
+  const dataRows = cols.hasHeader ? rows.slice(1) : rows;
+  return dataRows.map(row => {
+    const title = (row[cols.title] || '').trim();
+    if (!title) return null;
+    const rankDigits = cols.rank >= 0 ? (row[cols.rank] || '').replace(/\D/g, '') : '';
+    const yearMatch = cols.year >= 0 ? (row[cols.year] || '').match(/(18|19|20)\d{2}/) : null;
+    const imdbRaw = cols.imdb >= 0 ? (row[cols.imdb] || '').trim() : '';
+    return {
+      title,
+      rank: rankDigits ? parseInt(rankDigits, 10) : null,
+      year: yearMatch ? parseInt(yearMatch[0], 10) : null,
+      imdb_id: /^tt\d+$/i.test(imdbRaw) ? imdbRaw.toLowerCase() : null
+    };
+  }).filter(Boolean);
+}
+
+async function importRankingCsv(event) {
+  const fileInput = event.target;
+  const file = fileInput.files[0];
+  fileInput.value = '';
+  if (!file) return;
+
+  const status = document.getElementById('ranking-import-status');
+  const listName = document.getElementById('ranking-list-name').value.trim();
+  const shortLabel = document.getElementById('ranking-list-label').value.trim();
+
+  if (!listName || !shortLabel) {
+    alert('Enter a list name and badge label before importing.');
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const entries = parseRankingCsv(text);
+    if (entries.length === 0) throw new Error('No entries found in file');
+
+    const exists = filmRankings.some(r => r.list_name === listName);
+    if (exists && !confirm(`A list named "${listName}" already exists. Replace it?`)) return;
+
+    status.textContent = `Importing ${entries.length} entries...`;
+
+    if (exists) {
+      const { error } = await supabaseClient
+        .from('film_rankings')
+        .delete()
+        .eq('list_name', listName);
+      if (error) throw error;
+    }
+
+    const rows = entries.map(e => ({ list_name: listName, short_label: shortLabel, ...e }));
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await supabaseClient
+        .from('film_rankings')
+        .insert(rows.slice(i, i + 500));
+      if (error) throw error;
+    }
+
+    filmRankings = filmRankings.filter(r => r.list_name !== listName).concat(rows);
+    buildRankingIndex();
+    populateRankingFilter();
+    populateRankingListsSettings();
+    renderFilms();
+
+    status.textContent = `Imported ${entries.length} entries — ${countRankingMatches(listName)} match films in your list.`;
+    document.getElementById('ranking-list-name').value = '';
+    document.getElementById('ranking-list-label').value = '';
+
+  } catch (error) {
+    console.error('Ranking import failed:', error);
+    status.textContent = '';
+    const hint = (error.message || '').includes('film_rankings')
+      ? '\n\nMake sure the film_rankings table exists — see SETUP.md.'
+      : '';
+    alert('Import failed: ' + error.message + hint);
+  }
+}
+
+function populateRankingListsSettings() {
+  const container = document.getElementById('ranking-lists-list');
+  if (!container) return;
+
+  const names = [...new Set(filmRankings.map(r => r.list_name))].sort();
+  if (names.length === 0) {
+    container.innerHTML = '<p style="color: var(--text-secondary)">No lists imported yet</p>';
+    return;
+  }
+
+  container.innerHTML = names.map(name => {
+    const entries = filmRankings.filter(r => r.list_name === name);
+    const ranked = entries.some(e => e.rank != null);
+    const matched = countRankingMatches(name);
+    return `
+      <span class="tag-item">
+        ${escapeHtml(name)} (${escapeHtml(entries[0].short_label)}) — ${ranked ? 'ranked' : 'unranked'}, ${matched}/${entries.length} on your list
+        <button onclick="deleteRankingList('${escapeJs(name)}')" title="Delete list">&times;</button>
+      </span>
+    `;
+  }).join('');
+}
+
+async function deleteRankingList(name) {
+  if (!confirm(`Delete the list "${name}" and its badges?`)) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('film_rankings')
+      .delete()
+      .eq('list_name', name);
+    if (error) throw error;
+
+    filmRankings = filmRankings.filter(r => r.list_name !== name);
+    buildRankingIndex();
+    populateRankingFilter();
+    populateRankingListsSettings();
+    renderFilms();
+  } catch (error) {
+    alert('Failed to delete list: ' + error.message);
+  }
 }
 
 // ============================================================================
@@ -2108,6 +2469,9 @@ function openSettings() {
   // Populate streaming services
   populateServicesSettings();
 
+  // Populate film ranking lists
+  populateRankingListsSettings();
+
   elements.settingsModal.classList.remove('hidden');
 }
 
@@ -2292,4 +2656,5 @@ window.updateBookField = updateBookField;
 window.addBookTag = addBookTag;
 window.removeBookTag = removeBookTag;
 window.deleteGlobalTag = deleteGlobalTag;
+window.deleteRankingList = deleteRankingList;
 window.toggleService = toggleService;
